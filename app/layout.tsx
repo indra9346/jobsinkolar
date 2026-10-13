@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { Header, Footer } from '@/components/site'
+import { AIChatbot } from '@/components/AIChatbot'
+import { ScrollToTop } from '@/components/ScrollToTop'
 
 export const metadata: Metadata = {
   title: {
@@ -40,6 +42,8 @@ export default function RootLayout({
         <Header />
         {children}
         <Footer />
+        <ScrollToTop />
+        <AIChatbot />
       </body>
     </html>
   )

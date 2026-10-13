@@ -17,9 +17,11 @@ import {
   ArrowRight,
   LogOut,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Users
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { StatusBadge } from '@/components/StatusBadge'
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null)
@@ -124,6 +126,19 @@ export default function Dashboard() {
 
   const isEmployer = user?.user_metadata?.role === 'employer'
 
+  const calculateCompletion = () => {
+    if (!profile) return 30
+    let score = 0
+    if (profile.full_name) score += 25
+    if (profile.phone) score += 20
+    if (profile.location) score += 15
+    if (profile.headline || profile.company_name) score += 20
+    if ((profile.skills && profile.skills.length > 0) || profile.company_description || profile.bio) score += 20
+    return Math.min(100, score)
+  }
+
+  const completionRate = calculateCompletion()
+
   if (!loading && accountStatus !== 'active') {
     return <main className="page-shell"><div className="page-container" style={{ maxWidth: 720 }}><div className="panel" style={{ textAlign: 'center', padding: 42 }}><AlertCircle size={32} color="var(--primary)" /><h1 className="page-title" style={{ fontSize: 30 }}>Account {accountStatus}</h1><p className="page-intro">This account has been {accountStatus} by the Jobs in Kolar administration team. Contact support if you think this is a mistake.</p><button className="button button-primary" onClick={handleSignOut}><LogOut size={15} /> Sign out</button></div></div></main>
   }
@@ -143,7 +158,7 @@ export default function Dashboard() {
             padding: '36px',
             border: '1px solid var(--border-light)',
             boxShadow: 'var(--shadow-card)',
-            marginBottom: '32px',
+            marginBottom: '24px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -179,6 +194,58 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Profile Completion Meter Card */}
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #1e1b4b 0%, #1e3a8a 100%)',
+            borderRadius: '20px',
+            padding: '24px 28px',
+            color: '#ffffff',
+            boxShadow: 'var(--shadow-card)',
+            marginBottom: '32px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '20px',
+          }}
+        >
+          <div style={{ flex: '1 1 320px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc' }}>
+                Profile Strength & Verification
+              </span>
+              <span style={{ fontSize: '15px', fontWeight: 800, color: '#f43f5e' }}>
+                {completionRate}% Complete
+              </span>
+            </div>
+            <div style={{ width: '100%', height: '10px', background: 'rgba(255, 255, 255, 0.2)', borderRadius: '999px', overflow: 'hidden' }}>
+              <div
+                style={{
+                  width: `${completionRate}%`,
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #f43f5e 0%, #fb7185 100%)',
+                  borderRadius: '999px',
+                  transition: 'width 0.6s ease'
+                }}
+              />
+            </div>
+            <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#cbd5e1' }}>
+              {completionRate === 100
+                ? 'Your profile is 100% complete and fully verified for Kolar employers.'
+                : 'Add your mobile number, locality, and top skills in the Edit Profile tab to reach 100% visibility.'}
+            </p>
+          </div>
+
+          <button
+            className="button button-sm"
+            onClick={() => setActiveTab('profile')}
+            style={{ background: '#ffffff', color: '#1e1b4b', fontWeight: 700, border: 'none' }}
+          >
+            Enhance Profile
+          </button>
+        </div>
+
         {/* Dashboard Tabs */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
           <button
@@ -200,6 +267,15 @@ export default function Dashboard() {
             >
               Saved Jobs ({savedJobs.length})
             </button>
+          )}
+          {isEmployer && (
+            <Link
+              href="/candidates"
+              className="button button-sm button-secondary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Users size={14} /> Talent Pool
+            </Link>
           )}
           <button
             className={`button button-sm ${activeTab === 'profile' ? 'button-primary' : 'button-secondary'}`}
@@ -283,7 +359,7 @@ export default function Dashboard() {
                         <strong style={{ fontSize: '16px', display: 'block' }}>{app.jobs?.title}</strong>
                         <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{app.jobs?.company_name} · {app.jobs?.location}</span>
                       </div>
-                      <span className="job-pill job-pill-primary">{app.status}</span>
+                      <StatusBadge status={app.status || 'applied'} />
                     </div>
                   ))}
                 </div>

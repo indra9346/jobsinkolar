@@ -73,7 +73,8 @@ export function Header() {
         <nav className={open ? 'navlinks show' : 'navlinks'}>
           <Link href="/" className="navlink-item" onClick={() => setOpen(false)}>Home</Link>
           <Link href="/jobs" className="navlink-item" onClick={() => setOpen(false)}>Browse Jobs</Link>
-          <Link href="/jobs?category=Manufacturing" className="navlink-item" onClick={() => setOpen(false)}>Manufacturing Jobs</Link>
+          <Link href="/candidates" className="navlink-item" onClick={() => setOpen(false)}>Talent Pool</Link>
+          <Link href="/jobs?category=Manufacturing" className="navlink-item" onClick={() => setOpen(false)}>Manufacturing</Link>
           <Link href="/about" className="navlink-item" onClick={() => setOpen(false)}>About Kolar</Link>
           <Link href="/job-alerts" className="navlink-item" onClick={() => setOpen(false)}>Job Alerts</Link>
           {isAdmin && <Link href="/admin" className="navlink-item" onClick={() => setOpen(false)}>Admin</Link>}
@@ -152,6 +153,7 @@ export function Footer() {
               <h4>Employers & Areas</h4>
               <ul className="footer-links">
                 <li><Link href="/employers/post">Post a Job Listing</Link></li>
+                <li><Link href="/candidates">Verified Talent Pool</Link></li>
                 <li><Link href="/auth?mode=signup">Employer Account</Link></li>
                 <li><Link href="/about">About Kolar District Hub</Link></li>
                 <li><Link href="/jobs?location=Malur">Jobs in Malur</Link></li>
