@@ -1,0 +1,5 @@
+-- Intentionally contains no user, password, company, or job seed records.
+-- Region and category reference data is maintained in versioned migrations.
+-- Promote an existing account to administrator explicitly in Supabase SQL:
+-- update public.profiles set is_admin = true, role = 'admin'
+-- where id = (select id from auth.users where email = 'YOUR_ADMIN_EMAIL');
