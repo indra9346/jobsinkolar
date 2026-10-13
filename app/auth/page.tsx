@@ -33,31 +33,53 @@ function AuthForm() {
     try {
       if (mode === 'signup') {
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: email.trim(),
           password,
           options: {
             data: {
-              full_name: name,
+              full_name: name.trim(),
               role,
             },
           },
         })
 
         if (error) {
+          if (error.message.toLowerCase().includes('already registered')) {
+            const loginRes = await supabase.auth.signInWithPassword({
+              email: email.trim(),
+              password,
+            })
+            if (loginRes.data.session) {
+              setIsSuccess(true)
+              setMessage('Welcome back! Redirecting to your dashboard...')
+              window.location.href = '/dashboard'
+              return
+            }
+          }
           setMessage(error.message)
           setIsSuccess(false)
         } else {
           setIsSuccess(true)
           if (data.session) {
-            setMessage('Account created successfully! Welcome to Jobs in Kolar.')
-            setTimeout(() => { window.location.href = '/dashboard' }, 1000)
+            setMessage('Account created! Redirecting to your dashboard...')
+            window.location.href = '/dashboard'
           } else {
-            setMessage('Verification email sent! Please check your inbox to activate your account.')
+            const loginRes = await supabase.auth.signInWithPassword({
+              email: email.trim(),
+              password,
+            })
+            if (loginRes.data.session) {
+              setMessage('Account created! Redirecting to your dashboard...')
+              window.location.href = '/dashboard'
+            } else {
+              setMessage('Account created! Welcome to Jobs in Kolar.')
+              setTimeout(() => { window.location.href = '/dashboard' }, 500)
+            }
           }
         }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
-          email,
+          email: email.trim(),
           password,
         })
 
@@ -66,9 +88,9 @@ function AuthForm() {
           setIsSuccess(false)
         } else {
           setIsSuccess(true)
-          setMessage('Signed in successfully!')
+          setMessage('Signed in successfully! Redirecting...')
           if (data.session) {
-            setTimeout(() => { window.location.href = '/dashboard' }, 800)
+            window.location.href = '/dashboard'
           }
         }
       }

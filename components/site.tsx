@@ -19,7 +19,9 @@ import {
   Sparkles,
   CheckCircle2,
   FileText,
-  AlertCircle
+  AlertCircle,
+  User,
+  LogOut
 } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 import { NotificationBell } from '@/components/NotificationBell'
@@ -29,6 +31,7 @@ export function Header() {
   const [open, setOpen] = useState(false)
   const [activeJobsCount, setActiveJobsCount] = useState<number>(0)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
     const client = supabase
@@ -37,22 +40,30 @@ export function Header() {
         .then(({ count }) => {
           if (count && count > 0) setActiveJobsCount(count)
         })
-      let activeUserId = ''
+
       const syncAdmin = async (userId: string) => {
-        if (!client) return
-        if (!userId) { setIsAdmin(false); return }
+        if (!client || !userId) { setIsAdmin(false); return }
         const { data } = await client.from('profiles').select('is_admin').eq('id', userId).maybeSingle()
-        if (activeUserId === userId) setIsAdmin(Boolean(data?.is_admin))
+        setIsAdmin(Boolean(data?.is_admin))
       }
+
       const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
-        activeUserId = session?.user?.id || ''
-        if (!activeUserId) { setIsAdmin(false); return }
-        const nextId = activeUserId
-        queueMicrotask(() => { void syncAdmin(nextId) })
+        const nextUser = session?.user || null
+        setUser(nextUser)
+        if (nextUser?.id) {
+          void syncAdmin(nextUser.id)
+        } else {
+          setIsAdmin(false)
+        }
       })
+
       void client.auth.getUser().then(({ data: { user } }) => {
-        if (user && !activeUserId) { activeUserId = user.id; void syncAdmin(user.id) }
+        if (user) {
+          setUser(user)
+          void syncAdmin(user.id)
+        }
       })
+
       return () => subscription.unsubscribe()
     }
   }, [])
@@ -77,6 +88,7 @@ export function Header() {
           <Link href="/jobs?category=Manufacturing" className="navlink-item" onClick={() => setOpen(false)}>Manufacturing</Link>
           <Link href="/about" className="navlink-item" onClick={() => setOpen(false)}>About Kolar</Link>
           <Link href="/job-alerts" className="navlink-item" onClick={() => setOpen(false)}>Job Alerts</Link>
+          {user && <Link href="/dashboard" className="navlink-item" onClick={() => setOpen(false)}>Dashboard</Link>}
           {isAdmin && <Link href="/admin" className="navlink-item" onClick={() => setOpen(false)}>Admin</Link>}
           <span className="nav-live-pill">
             <span className="pulse-dot" />
@@ -86,12 +98,30 @@ export function Header() {
 
         <div className="navactions">
           <NotificationBell />
-          <Link className="button button-secondary button-sm" href="/auth?mode=signin">
-            Sign In
-          </Link>
-          <Link className="button button-primary button-sm" href="/employers/post">
-            <Briefcase size={15} /> Post a Job
-          </Link>
+          {user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Link className="button button-primary button-sm" href="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <User size={14} /> Dashboard
+              </Link>
+              <button
+                type="button"
+                className="button button-secondary button-sm"
+                onClick={async () => {
+                  if (supabase) await supabase.auth.signOut()
+                  setUser(null)
+                  window.location.href = '/'
+                }}
+                title="Sign Out"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              >
+                <LogOut size={14} /> Sign Out
+              </button>
+            </div>
+          ) : (
+            <Link className="button button-primary button-sm" href="/auth?mode=signin">
+              Sign In
+            </Link>
+          )}
         </div>
       </div>
     </header>
