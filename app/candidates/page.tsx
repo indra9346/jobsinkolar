@@ -109,7 +109,7 @@ export default function CandidatesPage() {
             >
               <Sparkles size={14} /> VERIFIED TALENT POOL
             </span>
-            <h1 style={{ fontSize: '36px', fontWeight: 800, margin: '0 0 14px', lineHeight: 1.2 }}>
+            <h1 style={{ fontSize: '36px', fontWeight: 800, margin: '0 0 14px', lineHeight: 1.2, color: '#ffffff' }}>
               Hire Verified Local Talent in Kolar District
             </h1>
             <p style={{ fontSize: '16px', color: '#cbd5e1', margin: 0, lineHeight: 1.65 }}>
