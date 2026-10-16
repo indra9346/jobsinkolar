@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, LayoutDashboard, LogOut, Menu, X } from 'lucide-react'
 import { Logo } from './Logo'
 import { useAuth } from '@/components/providers'
@@ -134,7 +135,8 @@ export function Header() {
         </div>
       </div>
 
-      {open && (
+      {open && createPortal(
+        // Portalled to <body>: the header's backdrop-filter would otherwise trap this fixed overlay inside the 64px header.
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal>
           <div className="absolute inset-0 animate-fade-in bg-ink/40" onClick={() => setOpen(false)} />
           <div className="absolute inset-y-0 right-0 flex w-[min(86vw,340px)] animate-fade-in flex-col bg-white shadow-pop">
@@ -193,7 +195,8 @@ export function Header() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </header>
   )
