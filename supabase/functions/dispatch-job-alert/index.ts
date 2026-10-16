@@ -46,7 +46,7 @@ Deno.serve(async (request) => {
   const company = escapeHtml(job.company_name)
   const location = escapeHtml(job.location)
   const description = escapeHtml(job.description).slice(0, 1400)
-  const jobUrl = `${appUrl}/jobs?id=${encodeURIComponent(job.id)}`
+  const jobUrl = `${appUrl}/jobs/${encodeURIComponent(job.id)}`
 
   try {
     const response = await fetch('https://api.resend.com/emails', {

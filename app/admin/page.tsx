@@ -1,134 +1,137 @@
-'use client'
-
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { AlertCircle, Briefcase, CheckCircle2, ExternalLink, MapPin, ShieldCheck, Users } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { ArrowRight } from 'lucide-react'
+import { requireRole } from '@/lib/session'
+import { PageHeader, Stat } from '@/components/ui/bits'
+import { formatINR, timeAgo } from '@/lib/format'
 
-export default function AdminPage() {
-  const [allowed, setAllowed] = useState(false)
-  const [ready, setReady] = useState(false)
-  const [jobs, setJobs] = useState<any[]>([])
-  const [areas, setAreas] = useState<any[]>([])
-  const [verifiedAreas, setVerifiedAreas] = useState<any[]>([])
-  const [jobAreas, setJobAreas] = useState<Record<string, string>>({})
-  const [message, setMessage] = useState('')
+export const metadata = { title: 'Overview' }
 
-  useEffect(() => {
-    let alive = true
-    async function load() {
-      if (!supabase) { setReady(true); return }
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { if (alive) setReady(true); return }
-      const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
-      if (!alive) return
-      if (!profile?.is_admin) { setReady(true); return }
-      setAllowed(true)
-      const [jr, ar, vr] = await Promise.all([
-        supabase.from('jobs').select('*').eq('status', 'pending_review').order('created_at', { ascending: false }),
-        supabase.from('area_suggestions').select('*').eq('status', 'pending').order('created_at', { ascending: false }),
-        supabase.from('areas').select('id,name,taluk,pincode').eq('active', true).eq('verified', true).order('taluk').order('name'),
-      ])
-      if (jr.error || ar.error) setMessage(jr.error?.message || ar.error?.message || 'Could not load the moderation queues.')
-      setJobs(jr.data || [])
-      setAreas(ar.data || [])
-      setVerifiedAreas(vr.data || [])
-      setReady(true)
-    }
-    load()
-    return () => { alive = false }
-  }, [])
+type Overview = {
+  candidates: number; employers: number; live_jobs: number; pending_jobs: number; applications: number; applications_7d: number; hires: number
+  pending_documents: number; unverified_companies: number; pending_areas: number; open_messages: number; revenue_inr: number
+  signups_14d: { day: string; candidates: number; employers: number }[]
+}
 
-  async function moderateJob(id: string, status: 'published' | 'rejected') {
-    if (!supabase) return
-    const job = jobs.find((item) => item.id === id)
-    const selectedArea = status === 'published' && job ? verifiedAreas.find((area) => area.id === (jobAreas[id] || job.area_id)) : null
-    if (status === 'published' && !selectedArea) { setMessage('Assign this job to an active verified Kolar locality before publishing.'); return }
-    const values: Record<string, any> = { status }
-    if (selectedArea) { values.area_id = selectedArea.id; values.taluk = selectedArea.taluk }
-    const { error } = await supabase.from('jobs').update(values).eq('id', id)
-    if (error) { setMessage(`Could not update this job: ${error.message}`); return }
-    setJobs((items) => items.filter((job) => job.id !== id))
-    setMessage(status === 'published' ? 'Job approved and published. Matching subscribers have been queued for alerts.' : 'Job rejected.')
-  }
+export default async function AdminHome() {
+  const { sb } = await requireRole('admin')
+  const [{ data }, { data: queue }, { data: actions }] = await Promise.all([
+    sb.rpc('admin_overview'),
+    sb.from('jobs').select('id,title,company_name,submitted_at').eq('status', 'pending_review').order('submitted_at', { ascending: true }).limit(6),
+    sb.from('admin_actions').select('id,target_type,action,reason,created_at').order('created_at', { ascending: false }).limit(8),
+  ])
+  const o = (data ?? {}) as Overview
+  const days = o.signups_14d ?? []
+  const peak = Math.max(1, ...days.map((d) => d.candidates + d.employers))
 
-  async function moderateArea(id: string, status: 'approved' | 'rejected') {
-    if (!supabase) return
-    const { error } = await supabase.from('area_suggestions').update({ status }).eq('id', id)
-    if (error) { setMessage(`Could not update this area: ${error.message}`); return }
-    setAreas((items) => items.filter((area) => area.id !== id))
-    setMessage(status === 'approved' ? 'Area suggestion accepted as unverified. Check its source in Manage localities before allowing job posts there.' : 'Area suggestion declined.')
-  }
-
-  if (!ready) return <main className="page-shell"><div className="page-container">Checking administrator access…</div></main>
-  if (!allowed) return (
-    <main className="page-shell"><div className="page-container" style={{ maxWidth: 720 }}>
-      <div className="panel" style={{ textAlign: 'center', padding: 42 }}>
-        <AlertCircle size={30} color="var(--primary)" />
-        <h1 className="page-title" style={{ fontSize: 28 }}>Administrator access required</h1>
-        <p className="page-intro">Sign in with the administrator account to manage private profiles, jobs and area submissions.</p>
-        <Link className="button button-primary" href="/auth?mode=signin">Sign in</Link>
-      </div>
-    </div></main>
-  )
+  const todo = [
+    [o.pending_jobs, 'jobs waiting for review', '/admin/jobs'],
+    [o.pending_documents, 'documents to verify', '/admin/documents'],
+    [o.unverified_companies, 'companies not verified', '/admin/employers?filter=unverified'],
+    [o.pending_areas, 'area suggestions', '/admin/areas'],
+    [o.open_messages, 'open contact messages', '/admin/inbox'],
+  ].filter(([n]) => Number(n) > 0) as [number, string, string][]
 
   return (
-    <main className="page-shell">
-      <div className="page-container">
-        <div style={{ marginBottom: 28 }}>
-          <span className="eyebrow eyebrow-navy"><ShieldCheck size={13} /> PRIVATE ADMINISTRATION</span>
-          <h1 className="page-title">Jobs in Kolar Admin</h1>
-          <p className="page-intro">Manage candidate profiles, publish local jobs and review employer submissions.</p>
-        </div>
-        {message && <div className="form-message success" role="status"><CheckCircle2 size={16} /> {message}</div>}
-
-        <div className="grid-two" style={{ marginBottom: 30 }}>
-          <Link href="/admin/profiles" className="panel" style={{ display: 'flex', alignItems: 'center', gap: 16, textDecoration: 'none' }}>
-            <Users color="var(--primary)" size={26} />
-            <span><strong style={{ display: 'block', color: 'var(--text-heading)' }}>Manage private profiles</strong><small style={{ color: 'var(--text-secondary)' }}>Review interest, account status, notes and history</small></span>
-            <ExternalLink size={16} style={{ marginLeft: 'auto' }} />
-          </Link>
-          <Link href="/admin/applications" className="panel" style={{ display: 'flex', alignItems: 'center', gap: 16, textDecoration: 'none' }}>
-            <Users color="var(--primary)" size={26} />
-            <span><strong style={{ display: 'block', color: 'var(--text-heading)' }}>Review applications</strong><small style={{ color: 'var(--text-secondary)' }}>Update candidate application status and review resumes</small></span>
-            <ExternalLink size={16} style={{ marginLeft: 'auto' }} />
-          </Link>
-          <Link href="/admin/jobs/new" className="panel" style={{ display: 'flex', alignItems: 'center', gap: 16, textDecoration: 'none' }}>
-            <Briefcase color="var(--primary)" size={26} />
-            <span><strong style={{ display: 'block', color: 'var(--text-heading)' }}>Post a Kolar job</strong><small style={{ color: 'var(--text-secondary)' }}>Publish from a verified taluk and area</small></span>
-            <ExternalLink size={16} style={{ marginLeft: 'auto' }} />
-          </Link>
-          <Link href="/admin/alerts" className="panel" style={{ display: 'flex', alignItems: 'center', gap: 16, textDecoration: 'none' }}>
-            <MapPin color="var(--primary)" size={26} />
-            <span><strong style={{ display: 'block', color: 'var(--text-heading)' }}>Monitor job alerts</strong><small style={{ color: 'var(--text-secondary)' }}>Track the email alert delivery queue live</small></span>
-            <ExternalLink size={16} style={{ marginLeft: 'auto' }} />
-          </Link>
-          <Link href="/admin/areas" className="panel" style={{ display: 'flex', alignItems: 'center', gap: 16, textDecoration: 'none' }}>
-            <MapPin color="var(--primary)" size={26} />
-            <span><strong style={{ display: 'block', color: 'var(--text-heading)' }}>Manage localities</strong><small style={{ color: 'var(--text-secondary)' }}>Verify areas against a source before job posts use them</small></span>
-            <ExternalLink size={16} style={{ marginLeft: 'auto' }} />
-          </Link>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 24, alignItems: 'start' }}>
-          <section className="panel">
-            <h2 style={{ fontSize: 20, margin: '0 0 18px', display: 'flex', gap: 8, alignItems: 'center' }}><Briefcase size={18} color="var(--primary)" /> Pending job posts ({jobs.length})</h2>
-            {jobs.length ? <div style={{ display: 'grid', gap: 14 }}>{jobs.map((job) => <article key={job.id} style={{ padding: 18, background: 'var(--bg-soft)', borderRadius: 14 }}>
-              <strong style={{ display: 'block' }}>{job.title}</strong><span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{job.company_name} · {job.location} · {job.category}</span>
-              {(!job.area_id || !verifiedAreas.some((area) => area.id === job.area_id)) && <label className="field" style={{ marginTop: 12 }}>Select verified locality before publishing<select value={jobAreas[job.id] || ''} onChange={(e) => setJobAreas((current) => ({ ...current, [job.id]: e.target.value }))}><option value="">Choose locality</option>{verifiedAreas.map((area) => <option key={area.id} value={area.id}>{area.taluk} · {area.name}{area.pincode ? ` · ${area.pincode}` : ''}</option>)}</select></label>}
-              <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.55 }}>{job.description}</p>
-              <div style={{ display: 'flex', gap: 8 }}><button className="button button-primary button-sm" onClick={() => moderateJob(job.id, 'published')}><CheckCircle2 size={14} /> Approve & publish</button><button className="button button-secondary button-sm" onClick={() => moderateJob(job.id, 'rejected')}>Reject</button></div>
-            </article>)}</div> : <div className="empty-state">No jobs are waiting for review.</div>}
-          </section>
-          <section className="panel">
-            <h2 style={{ fontSize: 20, margin: '0 0 18px', display: 'flex', gap: 8, alignItems: 'center' }}><MapPin size={18} color="var(--primary)" /> Area suggestions ({areas.length})</h2>
-            {areas.length ? <div style={{ display: 'grid', gap: 14 }}>{areas.map((area) => <article key={area.id} style={{ padding: 16, background: 'var(--bg-soft)', borderRadius: 14 }}>
-              <strong>{area.area_name}</strong><span style={{ display: 'block', color: 'var(--text-muted)', fontSize: 13, margin: '4px 0 12px' }}>{area.taluk} Taluk · PIN {area.pincode}</span>
-              <div style={{ display: 'flex', gap: 8 }}><button className="button button-primary button-sm" onClick={() => moderateArea(area.id, 'approved')}>Approve</button><button className="button button-secondary button-sm" onClick={() => moderateArea(area.id, 'rejected')}>Decline</button></div>
-            </article>)}</div> : <div className="empty-state">No area suggestions are waiting.</div>}
-          </section>
-        </div>
+    <>
+      <PageHeader title="Overview" description="Platform health and the moderation queue." />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat label="Candidates" value={o.candidates ?? 0} href="/admin/candidates" />
+        <Stat label="Employers" value={o.employers ?? 0} href="/admin/employers" />
+        <Stat label="Live jobs" value={o.live_jobs ?? 0} sub={`${o.pending_jobs ?? 0} pending review`} href="/admin/jobs" />
+        <Stat label="Applications" value={o.applications ?? 0} sub={`${o.applications_7d ?? 0} this week · ${o.hires ?? 0} hires`} href="/admin/applications" />
       </div>
-    </main>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
+        <div className="space-y-6">
+          <section className="card p-5">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold">Sign-ups, last 14 days</h2>
+              <p className="flex gap-3 text-xs text-ink-3">
+                <span className="flex items-center gap-1"><span className="size-2 rounded-sm bg-navy-600" /> Candidates</span>
+                <span className="flex items-center gap-1"><span className="size-2 rounded-sm bg-brand-500" /> Employers</span>
+              </p>
+            </div>
+            <div className="mt-5 flex h-36 items-end gap-1.5" role="img" aria-label="Daily sign-ups chart">
+              {days.map((d) => (
+                <div key={d.day} className="group relative flex h-full flex-1 flex-col justify-end" title={`${d.day}: ${d.candidates} candidates, ${d.employers} employers`}>
+                  <div className="rounded-t-sm bg-brand-500" style={{ height: `${(d.employers / peak) * 100}%` }} />
+                  <div className="bg-navy-600" style={{ height: `${(d.candidates / peak) * 100}%`, borderTopLeftRadius: d.employers ? 0 : 2, borderTopRightRadius: d.employers ? 0 : 2 }} />
+                  {d.candidates + d.employers === 0 && <div className="h-px bg-line" />}
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 flex justify-between text-[11px] text-ink-4">
+              <span>{days[0]?.day}</span>
+              <span>{days.at(-1)?.day}</span>
+            </div>
+          </section>
+
+          <section className="card">
+            <div className="flex items-center justify-between border-b border-line px-5 py-4">
+              <h2 className="font-semibold">Oldest jobs in review</h2>
+              <Link href="/admin/jobs" className="text-[13px] link">Open queue</Link>
+            </div>
+            {(queue ?? []).length === 0 ? (
+              <p className="px-5 py-8 text-center text-sm text-ink-3">The review queue is empty.</p>
+            ) : (
+              <ul className="divide-y divide-line-2">
+                {queue!.map((j) => (
+                  <li key={j.id}>
+                    <Link href={`/admin/jobs?focus=${j.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-canvas">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{j.title}</p>
+                        <p className="truncate text-sm text-ink-3">{j.company_name} · waiting {j.submitted_at ? timeAgo(j.submitted_at).replace(' ago', '') : '—'}</p>
+                      </div>
+                      <ArrowRight size={16} className="text-ink-4" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+
+        <aside className="space-y-6">
+          <section className="card p-5">
+            <h2 className="font-semibold">To do</h2>
+            {todo.length === 0 ? (
+              <p className="mt-2 text-sm text-ink-3">Nothing waiting. Nice.</p>
+            ) : (
+              <ul className="mt-3 space-y-1">
+                {todo.map(([n, l, h]) => (
+                  <li key={h}>
+                    <Link href={h} className="flex items-center gap-3 rounded-md px-2 py-2 text-sm hover:bg-canvas">
+                      <span className="min-w-7 rounded bg-brand-50 px-1.5 text-center font-semibold text-brand-700 tabular-nums">{n}</span>
+                      <span className="flex-1">{l}</span>
+                      <ArrowRight size={14} className="text-ink-4" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+          <section className="card p-5">
+            <p className="text-[13px] text-ink-3">Revenue (paid orders, incl. GST)</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums">{formatINR(o.revenue_inr ?? 0)}</p>
+            <Link href="/admin/payments" className="mt-2 inline-block text-[13px] link">Payments & credits</Link>
+          </section>
+          <section className="card p-5">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold">Recent moderation</h2>
+              <Link href="/admin/audit" className="text-[13px] link">Audit log</Link>
+            </div>
+            <ul className="mt-3 space-y-2 text-sm">
+              {(actions ?? []).length === 0 && <li className="text-ink-3">No actions yet.</li>}
+              {(actions ?? []).map((a) => (
+                <li key={a.id} className="flex justify-between gap-2">
+                  <span className="truncate"><span className="capitalize">{a.target_type}</span> · {a.action.replace('_', ' ')}</span>
+                  <span className="shrink-0 text-xs text-ink-4">{timeAgo(a.created_at)}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </aside>
+      </div>
+    </>
   )
 }
