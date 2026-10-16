@@ -136,11 +136,13 @@ export function Shell({
                   onClick={onClick}
                   className={cn(
                     'flex items-center gap-3 rounded-lg px-3 py-2 text-[14px] font-medium transition-colors',
-                    active ? 'bg-navy-50 text-navy-800' : 'text-ink-2 hover:bg-canvas hover:text-ink',
+                    'relative transition-all duration-200',
+                    active ? 'bg-gradient-to-r from-navy-50 to-white text-navy-800 shadow-[var(--shadow-card)]' : 'text-ink-2 hover:translate-x-0.5 hover:bg-canvas hover:text-ink',
                   )}
                   aria-current={active ? 'page' : undefined}
                 >
-                  <Icon size={18} className={active ? 'text-navy-600' : 'text-ink-4'} />
+                  {active && <span className="absolute inset-y-1.5 left-0 w-1 rounded-r-full bg-gradient-to-b from-navy-500 to-brand-500" aria-hidden />}
+                  <Icon size={18} className={active ? 'text-navy-600' : 'text-ink-4 transition-colors group-hover:text-ink-2'} />
                   <span className="flex-1 truncate">
                     <T>{it.label}</T>
                   </span>
@@ -154,9 +156,10 @@ export function Shell({
     ))
 
   return (
-    <div className="min-h-dvh bg-canvas">
+    <div className="min-h-dvh bg-gradient-to-br from-canvas via-white to-navy-50/40">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col border-r border-line bg-white lg:flex">
         <div className="flex h-16 items-center border-b border-line px-5">
+          <span className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-navy-600 via-brand-500 to-saffron-400" aria-hidden />
           <Logo href={role === 'admin' ? '/admin' : '/'} />
         </div>
         <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Portal">

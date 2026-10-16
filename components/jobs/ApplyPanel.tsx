@@ -13,6 +13,7 @@ import { Skeleton, Spinner } from '@/components/ui/bits'
 import { StatusPill } from '@/components/ui/StatusPill'
 import { SaveJobButton, useCandidateJobState } from './SaveJobButton'
 import { APP_STATUS } from '@/lib/constants'
+import { useLang } from '@/lib/i18n'
 import type { AppStatus } from '@/lib/types'
 
 type JobLite = {
@@ -32,6 +33,7 @@ export function ApplyPanel({ job }: { job: JobLite }) {
   const router = useRouter()
   const pathname = usePathname()
   const toast = useToast()
+  const { t } = useLang()
   const qc = useQueryClient()
   const state = useCandidateJobState()
   const [open, setOpen] = useState(false)
@@ -63,8 +65,8 @@ export function ApplyPanel({ job }: { job: JobLite }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user || !profile) return
-    if (name.trim().length < 2) return toast('Enter your full name', 'error')
-    if (!/^[6-9]\d{9}$/.test(phone.replace(/\D/g, '').slice(-10))) return toast('Enter a valid 10-digit mobile number', 'error')
+    if (name.trim().length < 2) return toast(t('Enter your full name'), 'error')
+    if (!/^[6-9]\d{9}$/.test(phone.replace(/\D/g, '').slice(-10))) return toast(t('Enter a valid 10-digit mobile number'), 'error')
     if (answers.some((a) => !a.trim())) return toast('Answer all screening questions', 'error')
     setBusy(true)
     const sb = getSupabase()
@@ -87,7 +89,7 @@ export function ApplyPanel({ job }: { job: JobLite }) {
       return toast(msg, 'error')
     }
     setOpen(false)
-    toast('Application sent. You will be notified when the employer responds.')
+    toast(t('Application sent. You will be notified when the employer responds.'))
     await Promise.all([qc.invalidateQueries({ queryKey: ['job-state'] }), qc.invalidateQueries({ queryKey: ['applications'] }), refreshProfile()])
     router.refresh()
   }
@@ -104,16 +106,16 @@ export function ApplyPanel({ job }: { job: JobLite }) {
   if (!user) {
     return (
       <div className="card p-5">
-        <p className="font-semibold">Interested in this job?</p>
-        <p className="mt-1 text-sm text-ink-3">Sign in or create a free account to apply. It takes under a minute.</p>
+        <p className="font-semibold">{t('Interested in this job?')}</p>
+        <p className="mt-1 text-sm text-ink-3">{t('Sign in or create a free account to apply. It takes under a minute.')}</p>
         <Link href={`/login?next=${encodeURIComponent(pathname)}`} className="btn btn-primary btn-lg mt-4 w-full">
-          Apply now
+          {t('Apply now')}
         </Link>
         <Link href={`/register?next=${encodeURIComponent(pathname)}`} className="btn btn-outline mt-2 w-full">
-          Create free account
+          {t('Create free account')}
         </Link>
         <MobileBar>
-          <Link href={`/login?next=${encodeURIComponent(pathname)}`} className="btn btn-primary btn-lg w-full">Apply now</Link>
+          <Link href={`/login?next=${encodeURIComponent(pathname)}`} className="btn btn-primary btn-lg w-full">{t('Apply now')}</Link>
         </MobileBar>
       </div>
     )
@@ -150,15 +152,15 @@ export function ApplyPanel({ job }: { job: JobLite }) {
           <>
             <div className="flex items-center gap-2.5">
               <CheckCircle2 size={20} className="text-emerald-600" />
-              <p className="font-semibold">You applied to this job</p>
+              <p className="font-semibold">{t('You applied to this job')}</p>
             </div>
             <div className="mt-3 flex items-center justify-between text-sm">
-              <span className="text-ink-3">Status</span>
+              <span className="text-ink-3">{t('Status')}</span>
               <StatusPill tone={APP_STATUS[applied.status as AppStatus].tone}>{APP_STATUS[applied.status as AppStatus].label}</StatusPill>
             </div>
             {(job.contact_phone || job.walk_in) && applied.status !== 'withdrawn' && (
               <div className="mt-4 rounded-lg bg-canvas p-3 text-sm">
-                <p className="font-medium">HR contact</p>
+                <p className="font-medium">{t('HR contact')}</p>
                 {job.contact_name && <p className="text-ink-2">{job.contact_name}</p>}
                 {job.contact_phone && (
                   <a href={`tel:${job.contact_phone}`} className="mt-1 inline-flex items-center gap-1.5 font-medium text-navy-700">
@@ -167,12 +169,12 @@ export function ApplyPanel({ job }: { job: JobLite }) {
                 )}
               </div>
             )}
-            <Link href={`/candidate/applications/${applied.id}`} className="btn btn-outline mt-4 w-full">Track application</Link>
+            <Link href={`/candidate/applications/${applied.id}`} className="btn btn-outline mt-4 w-full">{t('Track application')}</Link>
           </>
         ) : (
           <>
             <button onClick={() => setOpen(true)} disabled={expired} className="btn btn-primary btn-lg w-full">
-              {expired ? 'Applications closed' : 'Apply now'}
+              {expired ? t('Applications closed') : t('Apply now')}
             </button>
             <div className="mt-2 grid">
               <SaveJobButton jobId={job.id} withLabel />
@@ -180,15 +182,15 @@ export function ApplyPanel({ job }: { job: JobLite }) {
             {!expired && (
               <MobileBar>
                 <SaveJobButton jobId={job.id} withLabel />
-                <button onClick={() => setOpen(true)} className="btn btn-primary btn-lg flex-1">Apply now</button>
+                <button onClick={() => setOpen(true)} className="btn btn-primary btn-lg flex-1">{t('Apply now')}</button>
               </MobileBar>
             )}
             {!profile?.resume_path && !expired && (
               <p className="mt-3 flex gap-2 text-[13px] text-ink-3">
                 <FileText size={15} className="mt-0.5 shrink-0" />
                 <span>
-                  Applications with a resume get more replies.{' '}
-                  <Link href="/candidate/profile#resume" className="link">Add resume</Link>
+                  {t('Applications with a resume get more replies.')}{' '}
+                  <Link href="/candidate/profile#resume" className="link">{t('Add resume')}</Link>
                 </span>
               </p>
             )}
@@ -199,13 +201,13 @@ export function ApplyPanel({ job }: { job: JobLite }) {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title={`Apply to ${job.title}`}
+        title={`${t('Apply')}: ${job.title}`}
         description={job.company}
         footer={
           <>
-            <button onClick={() => setOpen(false)} className="btn btn-outline">Cancel</button>
+            <button onClick={() => setOpen(false)} className="btn btn-outline">{t('Cancel')}</button>
             <button form="apply-form" className="btn btn-primary" disabled={busy}>
-              {busy ? <Spinner /> : 'Submit application'}
+              {busy ? <Spinner /> : t('Submit application')}
             </button>
           </>
         }
@@ -213,11 +215,11 @@ export function ApplyPanel({ job }: { job: JobLite }) {
         <form id="apply-form" onSubmit={submit} className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="field">
-              <label className="label" htmlFor="ap-name">Full name</label>
+              <label className="label" htmlFor="ap-name">{t('Full name')}</label>
               <input id="ap-name" className="input" value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
             <div className="field">
-              <label className="label" htmlFor="ap-phone">Mobile number</label>
+              <label className="label" htmlFor="ap-phone">{t('Mobile number')}</label>
               <input id="ap-phone" className="input" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="10-digit mobile" required />
             </div>
           </div>
@@ -235,12 +237,12 @@ export function ApplyPanel({ job }: { job: JobLite }) {
             </div>
           ))}
           <div className="field">
-            <label className="label" htmlFor="ap-cover">Message to employer <span className="font-normal text-ink-4">(optional)</span></label>
+            <label className="label" htmlFor="ap-cover">{t('Message to employer')} <span className="font-normal text-ink-4">{t('(optional)')}</span></label>
             <textarea id="ap-cover" className="input" rows={3} maxLength={1500} value={cover} onChange={(e) => setCover(e.target.value)} placeholder="Why are you a good fit? When can you join?" />
           </div>
           <div className="flex items-center gap-2 rounded-lg bg-canvas px-3 py-2.5 text-[13px] text-ink-2">
             <FileText size={15} className="shrink-0 text-ink-3" />
-            {profile?.resume_path ? 'Your profile resume will be attached.' : 'No resume on your profile. You can still apply.'}
+            {profile?.resume_path ? t('Your profile resume will be attached.') : t('No resume on your profile. You can still apply.')}
           </div>
         </form>
       </Modal>

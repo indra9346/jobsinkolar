@@ -3,7 +3,7 @@ import { SITE } from '@/lib/constants'
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: [{ userAgent: '*', allow: '/', disallow: ['/candidate', '/employer', '/admin', '/auth'] }],
+    rules: [{ userAgent: '*', allow: '/', disallow: ['/candidate', '/employer', '/admin', '/admin-login', '/auth'] }],
     sitemap: `${SITE.url}/sitemap.xml`,
   }
 }

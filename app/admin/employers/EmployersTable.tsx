@@ -43,7 +43,7 @@ export function EmployersTable({ rows, filter, q, focus }: { rows: Row[]; filter
 
   return (
     <>
-      <PageHeader title="Employers" description="Verify companies, manage access and adjust credits." actions={<ApplicantSearch initial={q} placeholder="Search company name" />} />
+      <PageHeader title="Employers" description="Verify companies, manage access and adjust credits." actions={<ApplicantSearch initial={q} placeholder="Search company name" kind="company" />} />
       <div className="mb-4 flex gap-1.5">
         {[['all', 'All'], ['unverified', 'Not verified'], ['verified', 'Verified']].map(([k, l]) => (
           <Link key={k} href={`/admin/employers${k === 'all' ? '' : `?filter=${k}`}`} className={cn('rounded-full border px-3 py-1 text-[13px] font-medium', filter === k ? 'border-navy-600 bg-navy-50 text-navy-800' : 'border-line text-ink-2 hover:border-ink-4')}>{l}</Link>

@@ -28,7 +28,7 @@ export function CandidatesTable({ rows, total, page, q, status }: { rows: Row[];
   }
   return (
     <>
-      <PageHeader title="Candidates" description={`${total.toLocaleString('en-IN')} registered job seekers. Profiles are private to the candidate and administrators.`} actions={<ApplicantSearch initial={q} placeholder="Name, email, phone or role" />} />
+      <PageHeader title="Candidates" description={`${total.toLocaleString('en-IN')} registered job seekers. Profiles are private to the candidate and administrators.`} actions={<ApplicantSearch initial={q} placeholder="Name, email, phone or role" kind="candidate" />} />
       <div className="mb-4 flex flex-wrap gap-1.5">
         {[['', 'All'], ['active', 'Active'], ['suspended', 'Suspended'], ['blocked', 'Blocked']].map(([k, l]) => (
           <Link key={k} href={qs({ status: k })} className={cn('rounded-full border px-3 py-1 text-[13px] font-medium', status === k ? 'border-navy-600 bg-navy-50 text-navy-800' : 'border-line text-ink-2 hover:border-ink-4')}>{l}</Link>

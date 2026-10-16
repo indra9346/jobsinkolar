@@ -43,9 +43,11 @@ export async function middleware(request: NextRequest) {
   }
 
   if (portal) {
-    if (!claims) return redirect(`/login?next=${encodeURIComponent(path + request.nextUrl.search)}`)
+    if (!claims) return redirect(`${portal === '/admin' ? '/admin-login' : '/login'}?next=${encodeURIComponent(path + request.nextUrl.search)}`)
     if (role !== PORTALS[portal]) return redirect(homeFor(role))
   }
+
+  if (claims && path === '/admin-login' && role === 'admin') return redirect('/admin')
 
   if (claims && (path === '/login' || path === '/register')) {
     return redirect(safeNext(request.nextUrl.searchParams.get('next'), role ?? 'candidate', role === 'admin'))
@@ -55,5 +57,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/candidate/:path*', '/employer/:path*', '/admin/:path*', '/login', '/register'],
+  matcher: ['/candidate/:path*', '/employer/:path*', '/admin/:path*', '/admin-login', '/login', '/register'],
 }

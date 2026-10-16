@@ -77,8 +77,8 @@ export function Header() {
               key={n.href}
               href={n.href}
               className={cn(
-                'rounded-md px-3 py-2 text-[14px] font-medium transition-colors',
-                pathname.startsWith(n.href) ? 'text-ink' : 'text-ink-3 hover:text-ink',
+                'relative rounded-md px-3 py-2 text-[14px] font-medium transition-colors after:absolute after:inset-x-3 after:-bottom-[13px] after:h-0.5 after:origin-left after:rounded-full after:bg-gradient-to-r after:from-navy-600 after:to-brand-500 after:transition-transform after:duration-300',
+                pathname.startsWith(n.href) ? 'text-navy-800 after:scale-x-100' : 'text-ink-3 after:scale-x-0 hover:text-ink hover:after:scale-x-100',
               )}
             >
               <T>{n.label}</T>

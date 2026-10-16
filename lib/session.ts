@@ -14,7 +14,7 @@ export const getSessionProfile = cache(async () => {
 
 export async function requireRole(role: 'candidate' | 'employer' | 'admin') {
   const s = await getSessionProfile()
-  if (!s.user || !s.profile) redirect('/login')
+  if (!s.user || !s.profile) redirect(role === 'admin' ? '/admin-login' : '/login')
   const actual = s.profile.is_admin ? 'admin' : s.profile.role
   if (actual !== role) redirect(actual === 'admin' ? '/admin' : `/${actual}`)
   return s as { sb: typeof s.sb; user: NonNullable<typeof s.user>; profile: Profile }

@@ -9,14 +9,13 @@ import { useAuth } from '@/components/providers'
 import { Modal } from '@/components/ui/modal'
 import { PageHeader, Spinner } from '@/components/ui/bits'
 import { ChipSelect, TagInput } from '@/components/ui/TagInput'
+import { Autocomplete } from '@/components/ui/Autocomplete'
 import { AVAILABILITY, EDUCATION, ENGLISH, LANGUAGES, MAX_UPLOAD_BYTES, TALUKS } from '@/lib/constants'
 import { safeFileName } from '@/lib/storage'
 import { formatDate } from '@/lib/format'
 import type { Profile } from '@/lib/types'
 
 type Exp = { id: string; title: string; company: string; start_date: string; end_date: string | null; is_current: boolean; description: string | null }
-
-const SKILL_SUGGESTIONS = ['MS Excel', 'Tally', 'Customer service', 'CNC operation', 'Quality inspection', 'Forklift', 'Welding', 'Computer basics', 'Sales', 'Nursing', 'Teaching', 'Driving (LMV)']
 
 function Section({ id, title, desc, children }: { id: string; title: string; desc?: string; children: React.ReactNode }) {
   return (
@@ -195,7 +194,7 @@ export function ProfileForm({ profile, experiences, categories, welcome }: { pro
               </div>
               <div className="field sm:col-span-2">
                 <label className="label" htmlFor="current_title">Current or desired role</label>
-                <input id="current_title" className="input" placeholder="e.g. CNC Operator, Staff Nurse, Accountant" value={p.current_title} onChange={(e) => set('current_title', e.target.value)} maxLength={80} />
+                <Autocomplete id="current_title" kind="title" value={p.current_title} onChange={(v) => set('current_title', v.slice(0, 80))} placeholder="e.g. CNC Operator, Staff Nurse, Accountant" ariaLabel="Current or desired role" openOnFocus={false} />
               </div>
               <div className="field">
                 <label className="label" htmlFor="taluk">Taluk</label>
@@ -249,7 +248,7 @@ export function ProfileForm({ profile, experiences, categories, welcome }: { pro
             </div>
             <div className="field">
               <label className="label" htmlFor="skills">Skills</label>
-              <TagInput id="skills" value={p.skills} onChange={(v) => set('skills', v)} suggestions={SKILL_SUGGESTIONS} />
+              <TagInput id="skills" kind="skill" value={p.skills} onChange={(v) => set('skills', v)} placeholder="Type a skill, e.g. MS Excel" />
             </div>
             <div className="field">
               <span className="label">Languages you speak</span>

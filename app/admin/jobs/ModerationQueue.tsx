@@ -61,7 +61,7 @@ export function ModerationQueue({ jobs, tab, counts, focus, q }: { jobs: Row[]; 
 
   return (
     <>
-      <PageHeader title="Job moderation" description="Every job is reviewed before it goes live. Approve, request changes or close." actions={<ApplicantSearch initial={q} placeholder="Search title or company" />} />
+      <PageHeader title="Job moderation" description="Every job is reviewed before it goes live. Approve, request changes or close." actions={<ApplicantSearch initial={q} placeholder="Search title or company" kind="job" />} />
       <div className="-mx-4 mb-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
         <div className="flex min-w-max gap-1 border-b border-line">
           {TABS.map(([k, l]) => (

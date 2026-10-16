@@ -7,9 +7,11 @@ import { Eye, EyeOff } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase/client'
 import { safeNext } from '@/lib/auth-routing'
 import { Spinner } from '@/components/ui/bits'
+import { useLang } from '@/lib/i18n'
 
 export function LoginForm() {
   const params = useSearchParams()
+  const { t } = useLang()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
@@ -24,7 +26,7 @@ export function LoginForm() {
     const { data, error } = await sb.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
     if (error || !data.user) {
       setBusy(false)
-      setError(error?.message === 'Invalid login credentials' ? 'Email or password is incorrect.' : (error?.message ?? 'Could not sign in.'))
+      setError(error?.message === 'Invalid login credentials' ? t('Email or password is incorrect.') : (error?.message ?? 'Could not sign in.'))
       return
     }
     const { data: p } = await sb.from('profiles').select('role,is_admin,account_status').eq('id', data.user.id).maybeSingle()
@@ -48,11 +50,11 @@ export function LoginForm() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold">Welcome back</h1>
+      <h1 className="text-[28px] font-bold">{t('Welcome back')}</h1>
       <p className="mt-1.5 text-sm text-ink-3">
-        New to Jobs in Kolar?{' '}
+        {t('New to Jobs in Kolar?')}{' '}
         <Link href={`/register${params.get('next') ? `?next=${encodeURIComponent(params.get('next')!)}` : ''}`} className="link">
-          Create an account
+          {t('Create an account')}
         </Link>
       </p>
       <form onSubmit={submit} className="mt-8 grid gap-4" noValidate>
@@ -62,13 +64,13 @@ export function LoginForm() {
           </p>
         )}
         <div className="field">
-          <label htmlFor="email" className="label">Email</label>
+          <label htmlFor="email" className="label">{t('Email')}</label>
           <input id="email" type="email" autoComplete="email" required className="input h-11" value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="field">
           <div className="flex items-center justify-between">
-            <label htmlFor="password" className="label">Password</label>
-            <Link href="/forgot-password" className="text-[13px] link">Forgot password?</Link>
+            <label htmlFor="password" className="label">{t('Password')}</label>
+            <Link href="/forgot-password" className="text-[13px] link">{t('Forgot password?')}</Link>
           </div>
           <div className="relative">
             <input id="password" type={show ? 'text' : 'password'} autoComplete="current-password" required className="input h-11 pr-10" value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -78,7 +80,7 @@ export function LoginForm() {
           </div>
         </div>
         <button className="btn btn-navy btn-lg mt-2" disabled={busy || !email || !password}>
-          {busy ? <Spinner /> : 'Sign in'}
+          {busy ? <Spinner /> : t('Sign in')}
         </button>
       </form>
     </div>

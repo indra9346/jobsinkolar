@@ -4,11 +4,12 @@ import { notFound } from 'next/navigation'
 import { BadgeCheck, Briefcase, CalendarClock, Clock, GraduationCap, Languages, MapPin, Users, Wallet, AlertTriangle } from 'lucide-react'
 import { getJob, getSimilarJobs } from '@/lib/queries'
 import { Avatar } from '@/components/ui/bits'
-import { JobCard, experienceLabel } from '@/components/jobs/JobCard'
+import { JobCard, ExperienceText } from '@/components/jobs/JobCard'
 import { ApplyPanel } from '@/components/jobs/ApplyPanel'
-import { formatDate, formatSalary, timeAgo } from '@/lib/format'
+import { formatDate, formatSalary } from '@/lib/format'
 import { ENGLISH, PAY_TYPES, SHIFTS, SITE, WORK_MODES } from '@/lib/constants'
 import { logoUrl } from '@/lib/storage'
+import { Ago, T } from '@/lib/i18n'
 
 // Rendered on first request, then cached and revalidated (ISR).
 export async function generateStaticParams() {
@@ -35,15 +36,15 @@ export default async function JobDetailPage({ params }: Props) {
   const c = job.companies
   const companyName = c?.name ?? job.company_name
 
-  const facts: [typeof Wallet, string, string][] = [
+  const facts: [typeof Wallet, string, React.ReactNode][] = [
     [Wallet, 'Salary', `${formatSalary(job.salary_min, job.salary_max, job.salary_period)}${job.pay_type !== 'fixed' ? ` · ${PAY_TYPES[job.pay_type]}${job.incentive_max ? ` (up to ₹${job.incentive_max.toLocaleString('en-IN')} incentive)` : ''}` : ''}`],
-    [Briefcase, 'Experience', experienceLabel(job.experience_min, job.experience_max)],
-    [Clock, 'Job type', `${job.employment_type} · ${SHIFTS[job.shift]}`],
-    [MapPin, 'Work mode', WORK_MODES[job.work_mode]],
+    [Briefcase, 'Experience', <ExperienceText key="e" min={job.experience_min} max={job.experience_max} />],
+    [Clock, 'Job type', <span key="t"><T>{job.employment_type}</T> · {SHIFTS[job.shift]}</span>],
+    [MapPin, 'Work mode', <T key="w">{WORK_MODES[job.work_mode]}</T>],
     [GraduationCap, 'Education', job.education || 'Any'],
     [Languages, 'English', ENGLISH[job.english_level ?? 'none']],
     [Users, 'Openings', `${job.openings}`],
-    ...(job.deadline ? [[CalendarClock, 'Apply by', formatDate(job.deadline)] as [typeof Wallet, string, string]] : []),
+    ...(job.deadline ? [[CalendarClock, 'Apply by', formatDate(job.deadline)] as [typeof Wallet, string, React.ReactNode]] : []),
   ]
 
   const jsonLd = {
@@ -72,7 +73,8 @@ export default async function JobDetailPage({ params }: Props) {
         </nav>
         <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
           <div className="space-y-4">
-            <section className="card p-5 sm:p-6">
+            <section className="card relative overflow-hidden p-5 sm:p-6">
+              <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-navy-600 via-brand-500 to-saffron-400" aria-hidden />
               <div className="flex items-start gap-4">
                 <Avatar name={companyName} src={logoUrl(c?.logo_path)} size={56} square />
                 <div className="min-w-0 flex-1">
@@ -85,7 +87,7 @@ export default async function JobDetailPage({ params }: Props) {
                     )}
                     {c?.verified && (
                       <span className="inline-flex items-center gap-1 text-[13px] font-medium text-navy-600">
-                        <BadgeCheck size={16} /> Verified
+                        <BadgeCheck size={16} /> <T>Verified</T>
                       </span>
                     )}
                   </p>
@@ -100,14 +102,16 @@ export default async function JobDetailPage({ params }: Props) {
                   <div key={k} className="flex gap-3">
                     <Icon size={18} className="mt-0.5 shrink-0 text-ink-4" />
                     <div className="min-w-0">
-                      <dt className="text-xs text-ink-3">{k}</dt>
+                      <dt className="text-xs text-ink-3">
+                        <T>{k}</T>
+                      </dt>
                       <dd className="text-sm font-medium text-ink">{v}</dd>
                     </div>
                   </div>
                 ))}
               </dl>
               <p className="mt-5 flex flex-wrap gap-x-4 gap-y-1 border-t border-line-2 pt-4 text-xs text-ink-3">
-                <span>Posted {timeAgo(job.published_at ?? job.created_at)}</span>
+                <Ago iso={job.published_at ?? job.created_at} />
                 <span>{job.applications_count} applicant{job.applications_count === 1 ? '' : 's'}</span>
                 {job.expires_at && <span>Closes {formatDate(job.expires_at)}</span>}
               </p>
@@ -124,11 +128,15 @@ export default async function JobDetailPage({ params }: Props) {
             )}
 
             <section className="card p-5 sm:p-6">
-              <h2 className="text-base font-semibold">Job description</h2>
+              <h2 className="text-base font-semibold">
+                <T>Job description</T>
+              </h2>
               <div className="mt-3 text-[15px] leading-relaxed whitespace-pre-line text-ink-2">{job.description}</div>
               {job.requirements?.length > 0 && (
                 <>
-                  <h3 className="mt-6 text-sm font-semibold">Requirements</h3>
+                  <h3 className="mt-6 text-sm font-semibold">
+                    <T>Requirements</T>
+                  </h3>
                   <ul className="mt-2 list-disc space-y-1 pl-5 text-[15px] text-ink-2">
                     {job.requirements.map((r) => (
                       <li key={r}>{r}</li>
@@ -138,7 +146,9 @@ export default async function JobDetailPage({ params }: Props) {
               )}
               {job.skills?.length > 0 && (
                 <>
-                  <h3 className="mt-6 text-sm font-semibold">Skills</h3>
+                  <h3 className="mt-6 text-sm font-semibold">
+                    <T>Skills</T>
+                  </h3>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {job.skills.map((s) => (
                       <span key={s} className="chip">{s}</span>
@@ -148,7 +158,9 @@ export default async function JobDetailPage({ params }: Props) {
               )}
               {job.benefits?.length > 0 && (
                 <>
-                  <h3 className="mt-6 text-sm font-semibold">Benefits</h3>
+                  <h3 className="mt-6 text-sm font-semibold">
+                    <T>Benefits</T>
+                  </h3>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {job.benefits.map((s) => (
                       <span key={s} className="chip bg-emerald-50 text-emerald-800">{s}</span>
@@ -159,26 +171,36 @@ export default async function JobDetailPage({ params }: Props) {
             </section>
 
             <section className="card p-5 sm:p-6">
-              <h2 className="text-base font-semibold">Interview details</h2>
+              <h2 className="text-base font-semibold">
+                <T>Interview details</T>
+              </h2>
               <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
                 <div>
-                  <dt className="text-xs text-ink-3">Interview type</dt>
-                  <dd className="font-medium">{job.walk_in ? 'Walk-in interview' : 'Employer will contact shortlisted candidates'}</dd>
+                  <dt className="text-xs text-ink-3">
+                    <T>Interview type</T>
+                  </dt>
+                  <dd className="font-medium">{job.walk_in ? <T>Walk-in interview</T> : <T>Employer will contact shortlisted candidates</T>}</dd>
                 </div>
                 {job.interview_timings && (
                   <div>
-                    <dt className="text-xs text-ink-3">Timings</dt>
+                    <dt className="text-xs text-ink-3">
+                      <T>Timings</T>
+                    </dt>
                     <dd className="font-medium">{job.interview_timings}</dd>
                   </div>
                 )}
                 {job.interview_address && (
                   <div className="sm:col-span-2">
-                    <dt className="text-xs text-ink-3">Address</dt>
+                    <dt className="text-xs text-ink-3">
+                      <T>Address</T>
+                    </dt>
                     <dd className="font-medium">{job.interview_address}</dd>
                   </div>
                 )}
               </dl>
-              <p className="mt-4 text-xs text-ink-3">Contact details are shared with you after you apply.</p>
+              <p className="mt-4 text-xs text-ink-3">
+                <T>Contact details are shared with you after you apply.</T>
+              </p>
             </section>
 
             {c?.about && (
@@ -209,16 +231,24 @@ export default async function JobDetailPage({ params }: Props) {
               }}
             />
             <div className="card p-4 text-[13px] text-ink-3">
-              <p className="font-medium text-ink">Stay safe</p>
-              <p className="mt-1">Never pay to get a job. Report suspicious listings to {SITE.email}.</p>
-              <Link href={`/contact?topic=report&job=${job.id}`} className="link mt-2 inline-block">Report this job</Link>
+              <p className="font-medium text-ink">
+                <T>Stay safe</T>
+              </p>
+              <p className="mt-1">
+                <T>Never pay to get a job.</T> {SITE.email}
+              </p>
+              <Link href={`/contact?topic=report&job=${job.id}`} className="link mt-2 inline-block">
+                <T>Report this job</T>
+              </Link>
             </div>
           </aside>
         </div>
 
         {similar.length > 0 && (
           <section className="mt-10">
-            <h2 className="mb-4 text-lg font-semibold">Similar jobs</h2>
+            <h2 className="mb-4 text-lg font-semibold">
+              <T>Similar jobs</T>
+            </h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {similar.map((j) => (
                 <JobCard key={j.id} job={j} compact />

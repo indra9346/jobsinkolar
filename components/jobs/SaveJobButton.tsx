@@ -7,6 +7,7 @@ import { getSupabase } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers'
 import { useToast } from '@/components/ui/toast'
 import { cn } from '@/lib/format'
+import { useLang } from '@/lib/i18n'
 
 /** Saved + applied job ids for the signed-in candidate, shared by every card on the page. */
 export function useCandidateJobState() {
@@ -35,6 +36,7 @@ export function SaveJobButton({ jobId, withLabel = false }: { jobId: string; wit
   const router = useRouter()
   const toast = useToast()
   const qc = useQueryClient()
+  const { t } = useLang()
   const { data } = useCandidateJobState()
   const saved = data?.saved.has(jobId) ?? false
 
@@ -65,12 +67,12 @@ export function SaveJobButton({ jobId, withLabel = false }: { jobId: string; wit
       return
     }
     qc.invalidateQueries({ queryKey: ['saved-jobs'] })
-    toast(saved ? 'Removed from saved jobs' : 'Job saved')
+    toast(saved ? t('Removed from saved jobs') : t('Job saved'))
   }
 
   return withLabel ? (
     <button onClick={toggle} className={cn('btn btn-outline', saved && 'border-navy-200 bg-navy-50 text-navy-700')} aria-pressed={saved}>
-      <Bookmark size={16} className={saved ? 'fill-current' : ''} /> {saved ? 'Saved' : 'Save'}
+      <Bookmark size={16} className={saved ? 'fill-current' : ''} /> {saved ? t('Saved') : t('Save')}
     </button>
   ) : (
     <button
@@ -79,7 +81,7 @@ export function SaveJobButton({ jobId, withLabel = false }: { jobId: string; wit
       aria-pressed={saved}
       className={cn('flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-canvas', saved ? 'text-navy-600' : 'text-ink-4 hover:text-ink-2')}
     >
-      <Bookmark size={18} className={saved ? 'fill-current' : ''} />
+      <Bookmark size={18} className={cn('transition-transform', saved ? 'scale-110 fill-current' : 'group-hover:scale-110')} />
     </button>
   )
 }

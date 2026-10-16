@@ -46,6 +46,21 @@ export function ApplicantList({ rows, basePath, status, q, showJob = true }: { r
     return `${basePath}${basePath.includes('?') ? '&' : '?'}${p}`.replace(/[?&]$/, '')
   }
 
+  // Typeahead options from the applicants already loaded (names, roles, places, skills).
+  const suggestions: { value: string; type: string }[] = []
+  const seen = new Set<string>()
+  const add = (value: string | undefined, type: string) => {
+    if (!value || seen.has(value.toLowerCase())) return
+    seen.add(value.toLowerCase())
+    suggestions.push({ value, type })
+  }
+  for (const r of rows) {
+    add(r.candidate_snapshot?.full_name, 'candidate')
+    add(r.candidate_snapshot?.headline, 'role')
+    add(r.candidate_snapshot?.location, 'area')
+    for (const sk of r.candidate_snapshot?.skills ?? []) add(sk, 'skill')
+  }
+
   const csv = shown.map((r) => ({
     Candidate: r.candidate_snapshot?.full_name ?? '',
     Role: r.candidate_snapshot?.headline ?? '',
@@ -60,7 +75,7 @@ export function ApplicantList({ rows, basePath, status, q, showJob = true }: { r
   return (
     <>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <ApplicantSearch initial={q} />
+        <ApplicantSearch initial={q} options={suggestions} />
         <ExportCsv rows={csv} filename="applicants" />
       </div>
       <div className="-mx-4 mb-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">

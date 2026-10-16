@@ -8,6 +8,7 @@ import { getSupabase } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/toast'
 import { Spinner } from '@/components/ui/bits'
 import { ChipSelect, TagInput } from '@/components/ui/TagInput'
+import { Autocomplete } from '@/components/ui/Autocomplete'
 import { BENEFITS, EDUCATION, EMPLOYMENT_TYPES, ENGLISH, PAY_TYPES, SCREENING_SUGGESTIONS, SHIFTS, TALUKS, WORK_MODES } from '@/lib/constants'
 import { cn, formatSalary } from '@/lib/format'
 import type { Area, Job, Wallet } from '@/lib/types'
@@ -296,7 +297,7 @@ export function JobWizard(props: {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="field sm:col-span-2">
                 <label className="label" htmlFor="f-title">Job title</label>
-                <input id="f-title" className="input" placeholder="e.g. CNC Machine Operator" value={f.title} onChange={(e) => set('title', e.target.value)} maxLength={100} aria-invalid={!!errors.title} />
+                <Autocomplete id="f-title" kind="title" value={f.title} onChange={(v) => set('title', v.slice(0, 100))} placeholder="e.g. CNC Machine Operator" ariaLabel="Job title" openOnFocus={false} />
                 {err('title')}
               </div>
               <div className="field">
@@ -445,7 +446,7 @@ export function JobWizard(props: {
             </div>
             <div className="field">
               <label className="label" htmlFor="f-skills">Skills</label>
-              <TagInput id="f-skills" value={f.skills} onChange={(v) => set('skills', v)} max={15} />
+              <TagInput id="f-skills" kind="skill" value={f.skills} onChange={(v) => set('skills', v)} max={15} placeholder="Type a skill, e.g. Tally" />
             </div>
             <div className="field">
               <label className="label" htmlFor="f-description">Job description</label>

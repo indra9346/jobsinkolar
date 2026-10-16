@@ -26,10 +26,10 @@ export function Avatar({ name, src, size = 36, square = false, className }: { na
   )
 }
 
-export function EmptyState({ icon, title, body, action }: { icon?: React.ReactNode; title: string; body?: string; action?: React.ReactNode }) {
+export function EmptyState({ icon, title, body, action }: { icon?: React.ReactNode; title: React.ReactNode; body?: React.ReactNode; action?: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center px-6 py-14 text-center">
-      {icon && <div className="mb-4 flex size-11 items-center justify-center rounded-full bg-canvas text-ink-3">{icon}</div>}
+      {icon && <div className="mb-4 flex size-12 animate-pop items-center justify-center rounded-2xl bg-gradient-to-br from-navy-50 to-brand-50 text-navy-600 ring-1 ring-navy-100">{icon}</div>}
       <p className="font-semibold">{title}</p>
       {body && <p className="mt-1 max-w-sm text-sm text-ink-3">{body}</p>}
       {action && <div className="mt-5">{action}</div>}
@@ -46,7 +46,7 @@ export function PageHeader({ title, description, actions, back }: { title: strin
             ← {back.label}
           </Link>
         )}
-        <h1 className="text-[22px] font-semibold sm:text-2xl">{title}</h1>
+        <h1 className="text-[24px] font-bold sm:text-[28px]">{title}</h1>
         {description && <p className="mt-1 text-sm text-ink-3">{description}</p>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
@@ -54,20 +54,25 @@ export function PageHeader({ title, description, actions, back }: { title: strin
   )
 }
 
-export function Stat({ label, value, sub, href }: { label: string; value: React.ReactNode; sub?: React.ReactNode; href?: string }) {
+const STAT_TONES = ['from-navy-500 to-sky-400', 'from-brand-500 to-saffron-400', 'from-emerald-500 to-teal-400', 'from-violet-500 to-fuchsia-400']
+
+export function Stat({ label, value, sub, href, tone }: { label: string; value: React.ReactNode; sub?: React.ReactNode; href?: string; tone?: number }) {
+  const t = STAT_TONES[(tone ?? [...label].reduce((a, c) => a + c.charCodeAt(0), 0)) % STAT_TONES.length]
   const inner = (
     <>
-      <p className="text-[13px] font-medium text-ink-3">{label}</p>
-      <p className="mt-1.5 text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
-      {sub && <p className="mt-1 text-xs text-ink-3">{sub}</p>}
+      <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${t}`} aria-hidden />
+      <span className={`absolute -top-8 -right-8 size-24 rounded-full bg-gradient-to-br opacity-[0.12] blur-xl transition-opacity duration-300 group-hover:opacity-25 ${t}`} aria-hidden />
+      <p className="relative text-[13px] font-medium text-ink-3">{label}</p>
+      <p className="relative mt-1.5 text-[26px] font-bold tabular-nums tracking-tight">{value}</p>
+      {sub && <p className="relative mt-1 text-xs text-ink-3">{sub}</p>}
     </>
   )
   return href ? (
-    <Link href={href} className="card block p-4 transition-colors hover:border-ink-4">
+    <Link href={href} className="group card card-hover relative block overflow-hidden p-4">
       {inner}
     </Link>
   ) : (
-    <div className="card p-4">{inner}</div>
+    <div className="group card relative overflow-hidden p-4">{inner}</div>
   )
 }
 

@@ -9,11 +9,13 @@ import { safeNext } from '@/lib/auth-routing'
 import { TALUKS } from '@/lib/constants'
 import { Spinner } from '@/components/ui/bits'
 import { cn } from '@/lib/format'
+import { useLang } from '@/lib/i18n'
 
 type Role = 'candidate' | 'employer'
 
 export function RegisterForm() {
   const params = useSearchParams()
+  const { t } = useLang()
   const [role, setRole] = useState<Role>(params.get('role') === 'employer' ? 'employer' : 'candidate')
   const [f, setF] = useState({ full_name: '', company_name: '', phone: '', email: '', password: '', taluk: '' })
   const [show, setShow] = useState(false)
@@ -25,12 +27,12 @@ export function RegisterForm() {
 
   const validate = () => {
     const e: Record<string, string> = {}
-    if (f.full_name.trim().length < 2) e.full_name = 'Enter your full name'
+    if (f.full_name.trim().length < 2) e.full_name = t('Enter your full name')
     if (role === 'employer' && f.company_name.trim().length < 2) e.company_name = 'Enter your company or business name'
-    if (!/^[6-9]\d{9}$/.test(f.phone.replace(/\D/g, '').slice(-10)) || f.phone.replace(/\D/g, '').length < 10) e.phone = 'Enter a valid 10-digit mobile number'
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) e.email = 'Enter a valid email address'
-    if (f.password.length < 8) e.password = 'Use at least 8 characters'
-    else if (!/[A-Za-z]/.test(f.password) || !/\d/.test(f.password)) e.password = 'Use letters and at least one number'
+    if (!/^[6-9]\d{9}$/.test(f.phone.replace(/\D/g, '').slice(-10)) || f.phone.replace(/\D/g, '').length < 10) e.phone = t('Enter a valid 10-digit mobile number')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) e.email = t('Enter a valid email address')
+    if (f.password.length < 8) e.password = t('Use at least 8 characters')
+    else if (!/[A-Za-z]/.test(f.password) || !/\d/.test(f.password)) e.password = t('Use letters and at least one number')
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -79,9 +81,9 @@ export function RegisterForm() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold">Create your account</h1>
+      <h1 className="text-[28px] font-bold">{t('Create your account')}</h1>
       <p className="mt-1.5 text-sm text-ink-3">
-        Already registered? <Link href={`/login${params.get('next') ? `?next=${encodeURIComponent(params.get('next')!)}` : ''}`} className="link">Sign in</Link>
+        {t('Already registered?')} <Link href={`/login${params.get('next') ? `?next=${encodeURIComponent(params.get('next')!)}` : ''}`} className="link">{t('Sign in')}</Link>
       </p>
 
       <div className="mt-7 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Account type">
@@ -90,7 +92,7 @@ export function RegisterForm() {
             ['candidate', UserRound, 'I want a job', 'Find and apply'],
             ['employer', Building2, 'I want to hire', 'Post jobs, find staff'],
           ] as const
-        ).map(([r, Icon, t, s]) => (
+        ).map(([r, Icon, title, s]) => (
           <button
             key={r}
             type="button"
@@ -101,8 +103,8 @@ export function RegisterForm() {
           >
             <Icon size={20} className={role === r ? 'text-navy-700' : 'text-ink-3'} />
             <span>
-              <span className="block text-sm font-semibold">{t}</span>
-              <span className="block text-xs text-ink-3">{s}</span>
+              <span className="block text-sm font-semibold">{t(title)}</span>
+              <span className="block text-xs text-ink-3">{t(s)}</span>
             </span>
           </button>
         ))}
@@ -115,40 +117,40 @@ export function RegisterForm() {
             {formError.includes('Sign in') && <Link href="/login" className="font-medium underline">Sign in</Link>}
           </p>
         )}
-        {role === 'employer' && field('company_name', 'Company or business name', { autoComplete: 'organization' })}
-        {field('full_name', role === 'employer' ? 'Your name (hiring contact)' : 'Full name', { autoComplete: 'name' })}
+        {role === 'employer' && field('company_name', t('Company or business name'), { autoComplete: 'organization' })}
+        {field('full_name', role === 'employer' ? t('Your name (hiring contact)') : t('Full name'), { autoComplete: 'name' })}
         <div className="grid gap-4 sm:grid-cols-2">
-          {field('phone', 'Mobile number', { inputMode: 'tel', autoComplete: 'tel', placeholder: '98XXXXXXXX' })}
+          {field('phone', t('Mobile number'), { inputMode: 'tel', autoComplete: 'tel', placeholder: '98XXXXXXXX' })}
           {role === 'candidate' ? (
             <div className="field">
-              <label htmlFor="taluk" className="label">Your taluk</label>
+              <label htmlFor="taluk" className="label">{t('Your taluk')}</label>
               <select id="taluk" className="input h-11" value={f.taluk} onChange={set('taluk')}>
-                <option value="">Select</option>
+                <option value="">{t('Select')}</option>
                 {TALUKS.map((t) => (
                   <option key={t}>{t}</option>
                 ))}
-                <option value="">Outside Kolar district</option>
+                <option value="">{t('Outside Kolar district')}</option>
               </select>
             </div>
           ) : (
-            field('email', 'Work email', { type: 'email', autoComplete: 'email' })
+            field('email', t('Work email'), { type: 'email', autoComplete: 'email' })
           )}
         </div>
-        {role === 'candidate' && field('email', 'Email', { type: 'email', autoComplete: 'email' })}
+        {role === 'candidate' && field('email', t('Email'), { type: 'email', autoComplete: 'email' })}
         <div className="field">
-          <label htmlFor="password" className="label">Password</label>
+          <label htmlFor="password" className="label">{t('Password')}</label>
           <div className="relative">
             <input id="password" type={show ? 'text' : 'password'} autoComplete="new-password" className="input h-11 pr-10" value={f.password} onChange={set('password')} aria-invalid={Boolean(errors.password)} />
             <button type="button" onClick={() => setShow((s) => !s)} className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1.5 text-ink-3 hover:text-ink" aria-label={show ? 'Hide password' : 'Show password'}>
               {show ? <EyeOff size={17} /> : <Eye size={17} />}
             </button>
           </div>
-          {errors.password ? <p className="error-text">{errors.password}</p> : <p className="hint">At least 8 characters, with a number.</p>}
+          {errors.password ? <p className="error-text">{errors.password}</p> : <p className="hint">{t('At least 8 characters, with a number.')}</p>}
         </div>
         <button className="btn btn-primary btn-lg mt-1" disabled={busy}>
-          {busy ? <Spinner /> : role === 'employer' ? 'Create employer account' : 'Create account'}
+          {busy ? <Spinner /> : role === 'employer' ? t('Create employer account') : t('Create account')}
         </button>
-        {role === 'employer' && <p className="text-center text-xs text-ink-3">Includes 2 free job posts and 5 candidate unlocks.</p>}
+        {role === 'employer' && <p className="text-center text-xs text-ink-3">{t('Includes 2 free job posts and 5 candidate unlocks.')}</p>}
       </form>
     </div>
   )

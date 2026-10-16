@@ -33,7 +33,7 @@ export default async function AdminApplications({ searchParams }: { searchParams
 
   return (
     <>
-      <PageHeader title="Applications" description="Audit trail of every application on the platform." actions={<ApplicantSearch initial={sp.q ?? ''} placeholder="Candidate, job or company" />} />
+      <PageHeader title="Applications" description="Audit trail of every application on the platform." actions={<ApplicantSearch initial={sp.q ?? ''} placeholder="Candidate, job or company" kind="job" />} />
       <div className="mb-4 flex flex-wrap gap-1.5">
         {[['', 'All'], ...Object.entries(APP_STATUS).map(([k, v]) => [k, v.label])].map(([k, l]) => (
           <Link key={k} href={href({ status: k, page: '' })} className={cn('rounded-full border px-3 py-1 text-[13px] font-medium', (sp.status ?? '') === k ? 'border-navy-600 bg-navy-50 text-navy-800' : 'border-line text-ink-2 hover:border-ink-4')}>{l}</Link>

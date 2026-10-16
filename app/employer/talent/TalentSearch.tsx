@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/toast'
 import { Modal } from '@/components/ui/modal'
 import { Avatar, EmptyState, ListSkeleton, PageHeader, Spinner } from '@/components/ui/bits'
 import { downloadCsv } from '@/components/portal/ExportCsv'
+import { Autocomplete } from '@/components/ui/Autocomplete'
 import { CandidateFiles } from '@/components/portal/CandidateFiles'
 import { AVAILABILITY, ENGLISH, TALUKS } from '@/lib/constants'
 import { cn, formatDate, formatINR, timeAgo } from '@/lib/format'
@@ -143,10 +144,7 @@ export function TalentSearch({ employerId, verified, initialCredits, categories,
           <form onSubmit={(e) => { e.preventDefault(); apply() }} className="card grid gap-4 p-4">
             <div className="field">
               <label className="label" htmlFor="t-q">Keyword</label>
-              <div className="relative">
-                <Search size={15} className="absolute top-1/2 left-3 -translate-y-1/2 text-ink-4" />
-                <input id="t-q" className="input pl-9" placeholder="Role, skill, education" {...fld('q')} />
-              </div>
+              <Autocomplete id="t-q" kind="talent" value={draft.q} onChange={(v) => setDraft({ ...draft, q: v })} onSelect={(s) => apply({ ...draft, q: s.value })} placeholder="Role, skill, education" ariaLabel="Keyword" icon={<Search size={15} />} />
             </div>
             <div className="field">
               <label className="label" htmlFor="t-cat">Preferred category</label>

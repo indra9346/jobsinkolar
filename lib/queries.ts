@@ -10,6 +10,7 @@ export type JobFilters = {
   q?: string
   category?: string
   taluk?: string
+  area?: string
   type?: string
   mode?: string
   exp?: string
@@ -34,7 +35,8 @@ export async function searchJobs(f: JobFilters) {
     q = q.or(`title.ilike.%${term}%,company_name.ilike.%${term}%,category.ilike.%${term}%,description.ilike.%${term}%`)
   }
   if (f.category) q = q.eq('category', f.category)
-  if (f.taluk) q = q.eq('taluk', f.taluk)
+  if (f.area && /^[0-9a-f-]{36}$/i.test(f.area)) q = q.eq('area_id', f.area)
+  else if (f.taluk) q = q.eq('taluk', f.taluk)
   if (f.type) q = q.eq('employment_type', f.type)
   if (f.mode) q = q.eq('work_mode', f.mode)
   if (f.company) q = q.eq('company_id', f.company)
