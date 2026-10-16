@@ -176,7 +176,9 @@ export function SortSelect() {
 /** Typeahead filter that shows the applied value and can be cleared. */
 function FilterCombo({ current, placeholder, options, onPick }: { current: string; placeholder: string; options: Suggestion[]; onPick: (s: Suggestion | null) => void }) {
   const [text, setText] = useState(current)
-  useEffect(() => setText(current), [current])
+  useEffect(() => {
+    setText(current)
+  }, [current])
   return (
     <div className="relative">
       <Autocomplete

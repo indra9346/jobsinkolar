@@ -10,7 +10,10 @@ export function Reveal({ children, delay = 0, className, as: Tag = 'div' }: { ch
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    if (!('IntersectionObserver' in window)) return setShown(true)
+    if (!('IntersectionObserver' in window)) {
+      setShown(true)
+      return
+    }
     const io = new IntersectionObserver(
       ([e]) => {
         if (e.isIntersecting) {
@@ -38,7 +41,10 @@ export function CountUp({ value, duration = 1100, className }: { value: number; 
     const el = ref.current
     if (!el) return
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reduce || value === 0) return setN(value)
+    if (reduce || value === 0) {
+      setN(value)
+      return
+    }
     let raf = 0
     const io = new IntersectionObserver(([e]) => {
       if (!e.isIntersecting) return

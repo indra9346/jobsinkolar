@@ -46,7 +46,9 @@ export function Header() {
   const [menu, setMenu] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => setOpen(false), [pathname])
+  useEffect(() => {
+    setOpen(false)
+  }, [pathname])
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
   }, [open])

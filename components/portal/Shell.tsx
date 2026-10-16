@@ -111,7 +111,9 @@ export function Shell({
   const all = groups.flatMap((g) => g.items)
   const mobile = all.filter((i) => i.mobile).slice(0, 4)
 
-  useEffect(() => setMore(false), [pathname])
+  useEffect(() => {
+    setMore(false)
+  }, [pathname])
 
   const signOut = async () => {
     await getSupabase().auth.signOut()

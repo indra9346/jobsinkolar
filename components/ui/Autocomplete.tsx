@@ -118,7 +118,9 @@ export function Autocomplete({
     return out
   }, [options, server.data, value, limit])
 
-  useEffect(() => setActive(-1), [value])
+  useEffect(() => {
+    setActive(-1)
+  }, [value])
   useEffect(() => {
     if (!open) return
     const close = (e: MouseEvent) => !wrap.current?.contains(e.target as Node) && setOpen(false)
