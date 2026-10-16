@@ -1,60 +1,85 @@
 # Jobs in Kolar
 
-A responsive Kolar district jobs marketplace built with Next.js App Router, TypeScript, React, Supabase Auth, Postgres, Storage and Realtime.
+Local job marketplace for Kolar district (Kolar, Malur, Bangarpet, KGF, Mulbagal, Srinivaspur) with three portals: job seekers, employers and administrators. The hiring model follows apnaHire: job-post credits, candidate-database unlock credits, admin-moderated listings and an applicant pipeline.
+
+**Stack:** Next.js 15 (App Router, React 19), TypeScript, Tailwind CSS 4, Supabase (Postgres, Auth, Storage, Realtime, Edge Functions), Razorpay, deployed on Vercel.
 
 ## Run locally
 
-1. Install Node.js 20 or newer.
-2. Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from the Supabase project's API settings. Never place a service-role key in a `NEXT_PUBLIC_` variable or commit `.env.local`.
-3. Run `npm install`, then `npm run dev`, and open `http://localhost:3000`.
-
-The app uses the public anon key in the browser. Row-level security (RLS) controls access; admin-only actions also check the signed-in user's `profiles.is_admin` flag. The project-specific Supabase link file is ignored by Git.
-
-## Supabase database
-
-The versioned migrations are in `supabase/migrations/`:
-
-- `202610130001_initial_schema.sql` creates the marketplace tables, Auth profile trigger, storage bucket, categories, and baseline RLS policies.
-- `202610130002_admin_realtime_job_alerts.sql` adds admin-managed profile statuses, status history and private notes, private profile/application reads, canonical Kolar taluks and verified localities, subscriptions, notifications, delivery queue, and Realtime publication membership.
-- `202610130003_account_access_guards.sql` prevents blocked accounts from creating job applications or employer posts, and enforces verified locations in the database.
-- `202610130004_require_verified_published_jobs.sql` prevents any job without an active verified Kolar locality from becoming public.
-
-Apply migrations to the linked Supabase project with `npx supabase db push --linked`. To grant administrator access, use the Supabase SQL editor with the intended account email:
-
-```sql
-update public.profiles
-set is_admin = true, role = 'admin'
-where id = (select id from auth.users where email = 'ADMIN_EMAIL');
+```bash
+npm install
+cp .env.example .env.local   # fill in the Supabase URL and anon key
+npm run dev
 ```
 
-Do not put passwords, service keys, or real candidate data into `supabase/seed.sql`. That file intentionally contains no test accounts or sample jobs. Region and category reference data are versioned in migrations.
+Open http://localhost:3000. Only the public anon key goes in `.env.local`; never put a service-role key in a `NEXT_PUBLIC_` variable.
 
-## Admin access and privacy
+## What's in the app
 
-- `/admin` manages pending employer jobs and area suggestions.
-- `/admin/profiles` is the private profile console. It supports search, account lock/suspension, recruitment interest status, private notes, history, and admin-only resume links.
-- `/admin/applications` reviews applications, updates application status, and provides admin-only resume access.
-- `/admin/jobs/new` publishes a job from a canonical taluk and verified locality.
-- `/admin/areas` verifies or deactivates localities and records their source.
-- `/admin/alerts` shows the job-email delivery queue.
-- A profile is visible only to its owner and an administrator. Application details are visible only to the candidate and administrators. Employers cannot browse candidate identities or resumes.
-- Candidate dashboards receive profile-status and application-status changes through Realtime. Signed-in subscribers receive new matching-job notifications in the notification bell.
+| Area | Routes |
+|---|---|
+| Public | `/`, `/jobs` (server-side search, filters, sort, pagination), `/jobs/[id]`, `/companies`, `/companies/[slug]`, `/employers` (pricing), `/job-alerts`, `/suggest-area`, `/about`, `/contact`, `/privacy`, `/terms`, `/safety` |
+| Auth | `/login`, `/register` (job seeker / employer), `/forgot-password`, `/reset-password`, `/auth/callback` |
+| Job seeker `/candidate` | overview with profile strength, applications + timeline, saved jobs, messages, profile and work history, documents, job alerts, notifications, settings |
+| Employer `/employer` | overview, 4-step job wizard, jobs, applicant pipeline (shortlist, interview scheduler, offer, hire, private notes), candidate database with unlocks and saved searches, messages, company profile, credits and Razorpay billing with GST invoices, reports with CSV export |
+| Admin `/admin` | overview, job moderation (approve / request changes / close / feature), employers (verify, suspend, block, adjust credits), candidates, applications audit, document verification, payments, areas, job-alert email queue, contact inbox, audit log |
 
-The canonical district taluks are Kolar, Malur, Bangarpet, KGF, Mulbagal, and Srinivaspur. The job-posting form accepts only active, verified localities from the database.
+`middleware.ts` guards each portal by the `role` claim in the JWT; every rule is also enforced in Postgres with row-level security and triggers, so the database is the source of truth.
 
-## Job-alert email delivery
+## Business rules (enforced in the database)
 
-Publishing a matching job creates an idempotent `job_alert_deliveries` queue row. Email dispatch is implemented in `supabase/functions/dispatch-job-alert/` and uses Resend. To enable outbound email, the project owner must configure a verified Resend sender and the following Supabase Edge Function secrets:
+- **Job lifecycle:** draft → in review → live / needs changes → closed. Only admins publish. Submitting a job uses one job credit; resubmitting after a rejection is free. Editing the title, description, salary, category or location of a live job sends it back to review. Jobs expire after the plan's job duration (30–60 days).
+- **Credits:** every new employer gets the Free plan (2 job posts, 5 unlocks, no expiry). Paid plans add credits and extend validity. Credits are only granted by `apply_paid_order` (called by the payment functions) or by an admin adjustment, and every change is written to `credit_ledger`.
+- **Applications:** one per candidate per job; screening answers required; status pipeline Applied → Under review → Shortlisted → Interview → Offered → Hired, or Not selected / Withdrawn. Candidates can only withdraw; employers can't set Withdrawn; interviews need a date; hired and withdrawn applications are closed. Every change notifies the other side and is logged in `application_events`.
+- **Privacy:** candidate contact details and documents are visible only to employers they applied to, or verified employers who unlocked them (1 credit, idempotent). Unverified companies can search but not unlock.
+- **Messages:** tied to an application. Employers can always write; candidates can reply once shortlisted or after the employer writes first.
 
-- `RESEND_API_KEY`
-- `ALERT_FROM_EMAIL` (the verified sender address)
-- `PUBLIC_APP_URL` (for job and unsubscribe links)
-- `JOB_ALERT_WEBHOOK_SECRET` (a long random value)
+Run the end-to-end test (42 checks, fully rolled back, safe on the live project):
 
-Supabase provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to the function at runtime. Deploy `dispatch-job-alert` with JWT verification disabled because the database webhook authenticates with its custom secret header. In the Supabase Dashboard, create a Database Webhook for `public.job_alert_deliveries`, `INSERT` events, POSTing to `https://<project-ref>.supabase.co/functions/v1/dispatch-job-alert` with header `x-job-alert-secret: <same JOB_ALERT_WEBHOOK_SECRET>`. Check `/admin/alerts` after publishing to confirm the delivery state. Until the Resend key, sender and webhook are configured, job alerts remain queued and in-app alerts continue to work.
+```bash
+npx supabase db query --linked -f supabase/tests/business_flows.sql
+```
 
-The function can be deployed with `npx supabase functions deploy dispatch-job-alert --project-ref <project-ref>` after adding the settings above. See [Supabase Edge Function deployment](https://supabase.com/docs/guides/functions/deploy), [function configuration](https://supabase.com/docs/guides/functions/function-configuration), and [database webhooks](https://supabase.com/docs/guides/database/webhooks).
+A passing run ends with the error text `ALL_FLOWS_PASSED (42 checks)`; the raised error is what rolls everything back.
 
-## Deploy to Vercel
+## Database
 
-Push the project to the repository when ready, then import it into Vercel and add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` as project environment variables. Apply Supabase migrations separately; a Vercel deploy does not apply database schema changes.
+Migrations live in `supabase/migrations/` and are applied with:
+
+```bash
+npx supabase db push --linked
+```
+
+### Make yourself an administrator
+
+Register normally, then run in the Supabase SQL editor:
+
+```sql
+update public.profiles set is_admin = true, role = 'admin'
+where id = (select id from auth.users where email = 'YOUR_EMAIL');
+```
+
+Sign out and back in so your session picks up the admin role.
+
+## Payments (Razorpay)
+
+Plans and prices live in the `plans` table. To take payments online:
+
+1. Set these Edge Function secrets in Supabase: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `PUBLIC_APP_URL`.
+2. Deploy the functions:
+   ```bash
+   npx supabase functions deploy create-payment-order
+   npx supabase functions deploy verify-payment
+   npx supabase functions deploy razorpay-webhook --no-verify-jwt
+   ```
+3. In Razorpay, add a webhook for `payment.captured` pointing to `https://<project-ref>.supabase.co/functions/v1/razorpay-webhook` with the same webhook secret.
+
+Until this is set up, the Buy button offers to request a payment link instead (it lands in Admin → Contact inbox); admins can then add the credits from Admin → Employers.
+
+## Job-alert emails
+
+Publishing a job queues `job_alert_deliveries`. The `dispatch-job-alert` function sends them via Resend once these secrets are set: `RESEND_API_KEY`, `ALERT_FROM_EMAIL`, `PUBLIC_APP_URL`, `JOB_ALERT_WEBHOOK_SECRET`. Deploy it with `--no-verify-jwt` and add a database webhook on `job_alert_deliveries` INSERT that sends the header `x-job-alert-secret`. In-app alerts work without email.
+
+## Deploy
+
+Import the repository in Vercel and add the variables from `.env.example`. `vercel.json` pins functions to `icn1` (Seoul), next to the Supabase database, for the fastest server rendering. Public pages are statically generated and revalidated every 1–5 minutes; job and company pages are cached on first view.

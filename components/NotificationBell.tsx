@@ -1,70 +1,128 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { Bell, CheckCheck } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Bell } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { getSupabase } from '@/lib/supabase/client'
+import { useAuth } from '@/components/providers'
+import { timeAgo, cn } from '@/lib/format'
+import type { Notification } from '@/lib/types'
 
-type Notice = { id: string; title: string; body: string; href: string | null; read_at: string | null; created_at: string }
+export function useNotifications(limit = 30) {
+  const { user } = useAuth()
+  const qc = useQueryClient()
+  const key = ['notifications', user?.id]
 
-export function NotificationBell() {
-  const [userId, setUserId] = useState('')
-  const [items, setItems] = useState<Notice[]>([])
-  const [open, setOpen] = useState(false)
+  const query = useQuery({
+    queryKey: key,
+    enabled: Boolean(user),
+    queryFn: async () => {
+      const { data } = await getSupabase()
+        .from('notifications')
+        .select('id,kind,title,body,href,read_at,created_at')
+        .order('created_at', { ascending: false })
+        .limit(limit)
+      return (data ?? []) as Notification[]
+    },
+  })
 
   useEffect(() => {
-    const client = supabase
-    if (!client) return
-    let channel: ReturnType<NonNullable<typeof supabase>['channel']> | undefined
-    let alive = true
-    let currentUserId = ''
-    async function connect(userId: string) {
-      if (!client) return
-      if (!alive || currentUserId !== userId) return
-      const { data } = await client.from('notifications').select('id,title,body,href,read_at,created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(12)
-      if (!alive || currentUserId !== userId) return
-      setItems((data || []) as Notice[])
-      channel = client.channel(`user-notifications-${userId}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, (payload) => {
-          if (payload.eventType === 'INSERT') setItems((current) => [payload.new as Notice, ...current].slice(0, 12))
-          if (payload.eventType === 'UPDATE') setItems((current) => current.map((item) => item.id === (payload.new as Notice).id ? payload.new as Notice : item))
-        }).subscribe()
+    if (!user) return
+    const sb = getSupabase()
+    const ch = sb
+      .channel(`notif-${user.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => {
+        qc.invalidateQueries({ queryKey: ['notifications', user.id] })
+        // Most notifications mean some portal data changed too.
+        qc.invalidateQueries({ predicate: (q) => q.queryKey[0] !== 'notifications' })
+      })
+      .subscribe()
+    return () => {
+      void sb.removeChannel(ch)
     }
-    const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
-      const nextId = session?.user?.id || ''
-      if (nextId === currentUserId) return
-      currentUserId = nextId
-      setUserId(nextId)
-      setItems([])
-      if (channel) { void client.removeChannel(channel); channel = undefined }
-      if (nextId) queueMicrotask(() => { void connect(nextId) })
-    })
-    void client.auth.getUser().then(({ data: { user } }) => {
-      if (!alive || !user || currentUserId) return
-      currentUserId = user.id
-      setUserId(user.id)
-      void connect(user.id)
-    })
-    return () => { alive = false; subscription.unsubscribe(); if (channel) void client.removeChannel(channel) }
-  }, [])
+  }, [user, qc])
 
-  const unread = items.filter((item) => !item.read_at).length
-  async function markRead(item: Notice) {
-    if (!supabase || !userId || item.read_at) return
-    const readAt = new Date().toISOString()
-    const { error } = await supabase.from('notifications').update({ read_at: readAt }).eq('id', item.id).eq('user_id', userId)
-    if (!error) setItems((current) => current.map((notice) => notice.id === item.id ? { ...notice, read_at: readAt } : notice))
+  const markRead = async (ids?: string[]) => {
+    const sb = getSupabase()
+    let q = sb.from('notifications').update({ read_at: new Date().toISOString() }).is('read_at', null)
+    if (ids) q = q.in('id', ids)
+    qc.setQueryData<Notification[]>(key, (old) =>
+      old?.map((n) => (!ids || ids.includes(n.id) ? { ...n, read_at: n.read_at ?? new Date().toISOString() } : n)),
+    )
+    await q
   }
 
-  if (!userId) return null
-  return <div style={{ position: 'relative' }}>
-    <button type="button" className="button button-secondary button-sm" onClick={() => setOpen((value) => !value)} aria-label={`Notifications${unread ? `, ${unread} unread` : ''}`} aria-expanded={open}>
-      <Bell size={16} />{unread > 0 && <span style={{ minWidth: 18, height: 18, borderRadius: 99, display: 'inline-grid', placeItems: 'center', background: 'var(--primary)', color: '#fff', fontSize: 10, fontWeight: 700 }}>{unread > 9 ? '9+' : unread}</span>}
-    </button>
-    {open && <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 10px)', zIndex: 50, width: 'min(360px, calc(100vw - 32px))', background: '#fff', border: '1px solid var(--border-light)', borderRadius: 14, boxShadow: 'var(--shadow-card)', padding: 14 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 3px 10px' }}><strong>Notifications</strong><span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{unread} unread</span></div>
-      {items.length ? <div style={{ maxHeight: 370, overflowY: 'auto', display: 'grid', gap: 6 }}>{items.map((item) => <Link key={item.id} href={item.href || '/dashboard'} onClick={() => { void markRead(item); setOpen(false) }} style={{ display: 'block', textDecoration: 'none', padding: 11, borderRadius: 10, background: item.read_at ? '#fff' : 'var(--primary-light)', border: '1px solid var(--border-light)' }}><strong style={{ display: 'block', fontSize: 13, color: 'var(--text-heading)' }}>{item.title}</strong><span style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginTop: 3 }}>{item.body}</span><small style={{ color: 'var(--text-muted)' }}>{new Date(item.created_at).toLocaleString()}</small></Link>)}</div> : <div className="empty-state" style={{ padding: 20 }}>You’re all caught up.</div>}
-      {unread > 0 && <button type="button" className="button button-secondary button-sm" style={{ width: '100%', marginTop: 10 }} onClick={async () => { await Promise.all(items.filter((item) => !item.read_at).map(markRead)) }}><CheckCheck size={14} /> Mark all as read</button>}
-    </div>}
-  </div>
+  return { ...query, items: query.data ?? [], unread: (query.data ?? []).filter((n) => !n.read_at).length, markRead }
+}
+
+export function NotificationBell({ allHref }: { allHref: string }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const router = useRouter()
+  const { items, unread, markRead } = useNotifications()
+
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false)
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-label={`Notifications${unread ? `, ${unread} unread` : ''}`}
+        className="relative flex size-9 items-center justify-center rounded-lg text-ink-2 hover:bg-canvas hover:text-ink"
+      >
+        <Bell size={19} />
+        {unread > 0 && (
+          <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white ring-2 ring-white">
+            {unread > 9 ? '9+' : unread}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute right-0 z-50 mt-2 w-[min(92vw,380px)] animate-slide-up overflow-hidden rounded-xl border border-line bg-white shadow-pop">
+          <div className="flex items-center justify-between border-b border-line px-4 py-3">
+            <p className="text-sm font-semibold">Notifications</p>
+            {unread > 0 && (
+              <button onClick={() => markRead()} className="text-xs font-medium text-navy-600 hover:underline">
+                Mark all read
+              </button>
+            )}
+          </div>
+          <div className="max-h-[60vh] overflow-y-auto">
+            {items.length === 0 ? (
+              <p className="px-4 py-10 text-center text-sm text-ink-3">You&apos;re all caught up.</p>
+            ) : (
+              items.slice(0, 8).map((n) => (
+                <button
+                  key={n.id}
+                  onClick={() => {
+                    void markRead([n.id])
+                    setOpen(false)
+                    if (n.href) router.push(n.href)
+                  }}
+                  className={cn('flex w-full gap-3 border-b border-line-2 px-4 py-3 text-left last:border-0 hover:bg-canvas', !n.read_at && 'bg-navy-50/40')}
+                >
+                  <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', n.read_at ? 'bg-transparent' : 'bg-brand-600')} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-ink">{n.title}</span>
+                    <span className="mt-0.5 line-clamp-2 block text-[13px] text-ink-3">{n.body}</span>
+                    <span className="mt-1 block text-xs text-ink-4">{timeAgo(n.created_at)}</span>
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+          <Link href={allHref} onClick={() => setOpen(false)} className="block border-t border-line px-4 py-2.5 text-center text-[13px] font-medium text-navy-600 hover:bg-canvas">
+            View all
+          </Link>
+        </div>
+      )}
+    </div>
+  )
 }

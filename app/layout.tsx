@@ -1,49 +1,33 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
+import { Inter } from 'next/font/google'
 import './globals.css'
-import { Header, Footer } from '@/components/site'
-import { AIChatbot } from '@/components/AIChatbot'
-import { ScrollToTop } from '@/components/ScrollToTop'
+import { Providers } from '@/components/providers'
+import { SITE } from '@/lib/constants'
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
 
 export const metadata: Metadata = {
-  title: {
-    default: 'Jobs in Kolar | Verified Local Career Marketplace & Industrial Jobs',
-    template: '%s | Jobs in Kolar',
-  },
+  metadataBase: new URL(SITE.url),
+  title: { default: 'Jobs in Kolar — Local jobs across Kolar district', template: '%s · Jobs in Kolar' },
   description:
-    'Discover published job opportunities across Kolar district. Filter openings by official taluk, verified locality, role, and category.',
-  keywords: [
-    'Jobs in Kolar',
-    'Narasapura industrial area jobs',
-    'Kolar district jobs',
-    'Kolar jobs',
-    'KGF engineering jobs',
-    'Malur jobs',
-    'Karnataka local jobs',
-    'Jobs near Bengaluru',
-  ],
-  authors: [{ name: 'Jobs in Kolar Team' }],
-  icons: {
-    icon: '/images/logo.jpg',
-    apple: '/images/logo.jpg',
-  },
+    'Find verified jobs in Kolar, Malur, Bangarpet, KGF, Mulbagal and Srinivaspur. Apply in minutes, track every application, and hire local talent.',
+  applicationName: 'Jobs in Kolar',
+  openGraph: { type: 'website', siteName: 'Jobs in Kolar', locale: 'en_IN', images: ['/images/hero-workforce.jpg'] },
+  twitter: { card: 'summary_large_image' },
+  formatDetection: { telephone: false },
 }
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+export const viewport: Viewport = {
+  themeColor: '#ffffff',
+  width: 'device-width',
+  initialScale: 1,
+}
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="icon" href="/images/logo.jpg" />
-      </head>
+    <html lang="en" className={inter.variable}>
       <body>
-        <Header />
-        {children}
-        <Footer />
-        <ScrollToTop />
-        <AIChatbot />
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

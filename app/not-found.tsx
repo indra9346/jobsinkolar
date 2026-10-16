@@ -1,24 +1,17 @@
 import Link from 'next/link'
-import { ArrowLeft, Search } from 'lucide-react'
+import { Logo } from '@/components/site/Logo'
 
 export default function NotFound() {
   return (
-    <main className="page-shell" style={{ display: 'grid', placeItems: 'center', minHeight: '70vh' }}>
-      <div className="panel" style={{ textAlign: 'center', maxWidth: '520px', padding: '48px 36px' }}>
-        <span className="eyebrow" style={{ marginBottom: '16px' }}>404 · PAGE NOT FOUND</span>
-        <h1 style={{ fontSize: '32px', margin: '14px 0 10px' }}>Looking for a job in Kolar?</h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '15px', marginBottom: '28px' }}>
-          The page you’re looking for doesn’t exist or has moved. Explore hundreds of verified openings in our jobs directory.
-        </p>
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-          <Link href="/" className="button button-secondary button-sm">
-            <ArrowLeft size={15} /> Back to Home
-          </Link>
-          <Link href="/jobs" className="button button-primary button-sm">
-            <Search size={15} /> Browse Jobs
-          </Link>
-        </div>
+    <div className="flex min-h-dvh flex-col items-center justify-center px-6 text-center">
+      <Logo />
+      <p className="mt-10 text-sm font-semibold text-brand-700">404</p>
+      <h1 className="mt-2 text-2xl font-semibold">This page isn’t here</h1>
+      <p className="mt-2 max-w-sm text-ink-3">The job may have closed, or the link may be wrong.</p>
+      <div className="mt-6 flex gap-2">
+        <Link href="/jobs" className="btn btn-navy">Browse jobs</Link>
+        <Link href="/" className="btn btn-outline">Home</Link>
       </div>
-    </main>
+    </div>
   )
 }
